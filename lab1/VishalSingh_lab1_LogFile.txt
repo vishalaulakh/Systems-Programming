@@ -1,0 +1,1010 @@
+Script started on Mon 29 Jan 2024 09:09:42 PM EST
+
+vishalsingh@loki:~/ cd 3380/lab1 
+
+vishalsingh@loki lab1]$ ls
+all_invalid_pages.txt  part1.sh  part2-1.sh  part2-2.sh  top_10_IPs.txt  top_ten_404_pages.txt  VishalSingh_lab1_Log.txt
+________________________________________________________________________________________________________________________
+vishalsingh@loki:~/3380/lab1 [vishalsingh@loki lab1]$ cat part1.sh
+
+#!/bin/bash
+
+# Assignment Submission Tool to create a Zipped File
+
+# Check if a directory name is provided as a command line argument
+# Note: if  Entering a Directory name on Command Line, Enter lab1, lab2, lab3, etc as command
+if [ -z "$1" ]; then
+    echo "Usage: $0 <directory_name>"
+    exit 1
+fi
+
+
+# Constructing the ZIP file name using variables
+ZIP_FILENAME="$USER"_"$1".zip
+
+# Variable for Full path to the target sub-directory
+TARGET_DIRECTORY="$HOME/3380/$1/"
+
+# Checking if the specified directory exists
+if [ ! -d "$TARGET_DIRECTORY" ]; then
+    echo "Error: Directory '$TARGET_DIRECTORY' not found."
+    exit 1
+fi
+
+# Creating the ZIP file in my  HOME directory
+zip -r "$ZIP_FILENAME" $TARGET_DIRECTORY
+
+# Checking if the ZIP command was successful
+if [ $? -eq 0 ]; then
+    echo "ZIP file '$ZIP_FILENAME' created successfully in '$TARGET_DIRECTORY'."
+else
+    echo "Error: Failed to create ZIP file."
+fi
+
+# End of the script
+_________________________________________________________________________________________________________________________
+vishalsingh@loki:~/3380/lab1 [vishalsingh@loki lab1]$ cat part2-1.sh
+
+#!/bin/bash
+
+# Definining the log directory
+LOG_DIR="/home/COIS/3380/lab1"
+
+# The Output file for all matches and their counts
+OUTPUT_FILE="all_invalid_pages.txt"
+
+# The Output file for the top 10 most-requested invalid pages
+TOP_TEN_FILE="top_ten_404_pages.txt"
+
+# Check if log file specification is provided as a command-line argument
+if [ "$#" -ne 1 ]; then
+    echo "Usage: $0 <log_file_specification>"
+    exit 1
+fi
+
+# Log file specification from command-line argument
+LOG_FILE_SPEC="$1"
+
+# Search for non-existing pages (404 errors) and count unique occurrences
+grep ' 404 ' $LOG_DIR/$LOG_FILE_SPEC  | awk '{print $6 $7}' | sort | uniq -c | sort -nr > "$OUTPUT_FILE"
+
+# Extract the top 10 most-requested invalid pages
+head -n 10 "$OUTPUT_FILE" | awk '{print $1 $2}' > "$TOP_TEN_FILE"
+
+# Display a message indicating the completion of the analysis
+echo "Web log analysis completed. Results are stored in $OUTPUT_FILE and $TOP_TEN_FILE"
+_________________________________________________________________________________________________________________________
+vishalsingh@loki:~/3380/lab1 [vishalsingh@loki lab1]$ ./part2-1.sh system_logs_backup_2019-11-04_access.log.3
+Web log analysis completed. Results are stored in all_invalid_pages.txt and top_ten_404_pages.txt
+
+vishalsingh@loki:~/3380/lab1 [vishalsingh@loki lab1]$ cat top_ten_404_pages.txt
+27"POST/test.php
+24"POST/1.php
+18"POST/qq.php
+12"POST/x.php
+12"POST/ss.php
+12"POST/shell.php
+12"POST/confg.php
+12"POST/api.php
+10"GET/robots.txt
+9"POST/zxy.php
+
+vishalsingh@loki:~/3380/lab1 [vishalsingh@loki lab1]$ cat all_invalid_pages.txt
+     27 "POST/test.php
+     24 "POST/1.php
+     18 "POST/qq.php
+     12 "POST/x.php
+     12 "POST/ss.php
+     12 "POST/shell.php
+     12 "POST/confg.php
+     12 "POST/api.php
+     10 "GET/robots.txt
+      9 "POST/zxy.php
+      9 "POST/q.php
+      9 "POST/log.php
+      9 "POST/jsc.php
+      9 "POST/infos.php
+      9 "POST/conf.php
+      9 "POST/cmd.php
+      9 "POST/a.php
+      9 "POST/aaa.php
+      9 "POST/5f97c5c0/admin.php
+      9 "POST/2.php
+      9 "POST/123.php
+      6 "POST/zzz.php
+      6 "POST/zxc.php
+      6 "POST/zxc1.php
+      6 "POST/z.php
+      6 "POST/xx.php
+      6 "POST/xiaoxi.php
+      6 "POST/xiao.php
+      6 "POST/www.php
+      6 "POST/ww.php
+      6 "POST/v.php
+      6 "POST/uuu.php
+      6 "POST/uu.php
+      6 "POST/test404.php
+      6 "POST/test123.php
+      6 "POST/sss.php
+      6 "POST/ssaa.php
+      6 "POST/s.php
+      6 "POST/secure.php
+      6 "POST/qwq.php
+      6 "POST/qqq.php
+      6 "POST/qiqi.php
+      6 "POST/ppp.php
+      6 "POST/php.php
+      6 "POST/paylog.php
+      6 "POST/ooo.php
+      6 "POST/my.php
+      6 "POST/mm.php
+      6 "POST/MCLi.php
+      6 "POST/lucky.php
+      6 "POST/lr.php
+      6 "POST/lanyecn.php
+      6 "POST/info.php
+      6 "POST/index.php
+      6 "POST/hell.php
+      6 "POST/hack.php
+      6 "POST/dns.php
+      6 "POST/ddd.php
+      6 "POST/data.php
+      6 "POST/c.php
+      6 "POST/conflg.php
+      6 "POST/config.php
+      6 "POST/code.php
+      6 "POST/cnm.php
+      6 "POST/can.php
+      6 "POST/bf.php
+      6 "POST/app.php
+      6 "POST/aa.php
+      6 "POST/7.php
+      6 "POST/3.php
+      6 "POST/1ndex.php
+      6 "POST/12.php
+      6 "GET/test.php
+      6 "GET/shell.php
+      6 "GET/payload.php
+      6 "GET/muhstik.php
+      6 "GET/izom.php
+      6 "GET/cmd.php
+      5 "POST/hello.php
+      3 "POST/zzk.php
+      3 "POST/zza.php
+      3 "POST/zyc.php
+      3 "POST/zxc2.php
+      3 "POST/zxc0.php
+      3 "POST/zuoss.php
+      3 "POST/zuos.php
+      3 "POST/zuoshss.php
+      3 "POST/zuoshou.php
+      3 "POST/zuo.php
+      3 "POST/zuoindex.php
+      3 "POST/zshmindex.php
+      3 "POST/zmp.php
+      3 "POST/zhui.php
+      3 "POST/zhk.php
+      3 "POST/ze.php
+      3 "POST/yyy.php
+      3 "POST/yyx.php
+      3 "POST/yumo.php
+      3 "POST/ysy.php
+      3 "POST/yj.php
+      3 "POST/yc.php
+      3 "POST/ycc.php
+      3 "POST/yccc.php
+      3 "POST/yao.php
+      3 "POST/xz.php
+      3 "POST/xxxx.php
+      3 "POST/xxx.php
+      3 "POST/xx33.php
+      3 "POST/xw.php
+      3 "POST/xw1.php
+      3 "POST/xun.php
+      3 "POST/xs.php
+      3 "POST/xshell.php
+      3 "POST/xp.php
+      3 "POST/xmlrpc.php
+      3 "POST/xixi.php
+      3 "POST/xi.php
+      3 "POST/xiong.php
+      3 "POST/xing.php
+      3 "POST/xiaoyu.php
+      3 "POST/xiaomo.php
+      3 "POST/xiaomi.php
+      3 "POST/xiaomar.php
+      3 "POST/xiaoma.php
+      3 "POST/xiaomae.php
+      3 "POST/xiaohei.php
+      3 "POST/xiaodai.php
+      3 "POST/xiaobin.php
+      3 "POST/xh.php
+      3 "POST/wuwu.php
+      3 "POST/wuwu11.php
+      3 "POST/wulv.php
+      3 "POST/wsx.php
+      3 "POST/wshell.php
+      3 "POST/wp-includes/modules/wp-login.php
+      3 "POST/wp-includes/modules/wp-config.php
+      3 "POST/wp-includes/modules/modules.php
+      3 "POST/wp-includes/fonts/wp-login.php
+      3 "POST/wp-includes/fonts/wp-config.php
+      3 "POST/wp-includes/fonts/modules.php
+      3 "POST/wp-includes/css/wp-login.php
+      3 "POST/wp-includes/css/wp-config.php
+      3 "POST/wp-includes/css/modules.php
+      3 "POST/w.php
+      3 "POST/wp-admins.php
+      3 "POST/win.php
+      3 "POST/win1.php
+      3 "POST/whoami.php.php
+      3 "POST/whoami.php
+      3 "POST/weixiao.php
+      3 "POST/webslee.php
+      3 "POST/web.php
+      3 "POST/webconfig.txt.php
+      3 "POST/webconfig.php
+      3 "POST/wcp.php
+      3 "POST/wc.php
+      3 "POST/wb.php
+      3 "POST/wan.php
+      3 "POST/wanmei.php
+      3 "POST/wanan.php
+      3 "POST/vvv.php
+      3 "POST/vulnspy.php
+      3 "POST/vuln.php
+      3 "POST/vuln1.php
+      3 "POST/vf.php
+      3 "POST/ver.php
+      3 "POST/vendor/phpunit/phpunit/src/Util/PHP/eval-stdin.php
+      3 "POST/userr.php
+      3 "POST/user.php
+      3 "POST/up.php
+      3 "POST/u.php
+      3 "POST/Updata.php
+      3 "POST/tyrant.php
+      3 "POST/tty.php
+      3 "POST/ttt.php
+      3 "POST/tt.php
+      3 "POST/toor.php
+      3 "POST/tools.php
+      3 "POST/tomcat.php
+      3 "POST/tianqi.php
+      3 "POST/tiandi.php
+      3 "POST/think.php
+      3 "POST/tests.php
+      3 "POST/test1.php
+      3 "POST/temtel.php
+      3 "POST/temp.php
+      3 "POST/taocishun.php
+      3 "POST/t00ls.php
+      3 "POST/sz.php
+      3 "POST/system.php
+      3 "POST/super.php
+      3 "POST/Ss.php
+      3 "POST/sqlk.php
+      3 "POST/soga.php
+      3 "POST/sllolx.php
+      3 "POST/slider.php
+      3 "POST/Skri.php
+      3 "POST/shipu.php
+      3 "POST/shi.php
+      3 "POST/shh.php
+      3 "POST/she.php
+      3 "POST/sheep.php
+      3 "POST/sha.php
+      3 "POST/shanzhi.php
+      3 "POST/secure1.php
+      3 "POST/sean.php
+      3 "POST/sconfig.php
+      3 "POST/sbkc.php
+      3 "POST/sbkcb.php
+      3 "POST/sanan.php
+      3 "POST/sample.php
+      3 "POST/s1.php
+      3 "POST/ruyi.php
+      3 "POST/ruii.php
+      3 "POST/rrr.php
+      3 "POST/repeat.php
+      3 "POST/qwqw.php
+      3 "POST/qw.php
+      3 "POST/qwe.php
+      3 "POST/qunhuang.php
+      3 "POST/queqiao.php
+      3 "POST/que.php
+      3 "POST/qq5262.php
+      3 "POST/qiqi1.php
+      3 "POST/qiqi11.php
+      3 "POST/qiangkezhi.php
+      3 "POST/qaz.php
+      3 "POST/qaq.php
+      3 "POST/qa.php
+      3 "POST/python.php
+      3 "POST/ppx.php
+      3 "POST/pp.php
+      3 "POST/ppl.php
+      3 "POST/p.php
+      3 "POST/post.php
+      3 "POST/pop.php
+      3 "POST/pma.php
+      3 "POST/plus/yunjitan.php
+      3 "POST/plus/xsvip.php
+      3 "POST/plus/tou.php
+      3 "POST/plus/shaoyong.php
+      3 "POST/plus/service.php
+      3 "POST/plus/result.php
+      3 "POST/plus/read.php
+      3 "POST/plus/qiang.php
+      3 "POST/plus/mytag.php
+      3 "POST/plus/mybak.php
+      3 "POST/plus/moon.php
+      3 "POST/plus/ma.php
+      3 "POST/plus/lucas.php
+      3 "POST/plus/laobiao.php
+      3 "POST/plus/laobiaoaien.php
+      3 "POST/plus/huai.php
+      3 "POST/plus/gu.php
+      3 "POST/plus/e7xue.php
+      3 "POST/plus/dajihi.php
+      3 "POST/plus/canshi.php
+      3 "POST/plus/bakup.php
+      3 "POST/plus/90sec.php
+      3 "POST/pk1914.php
+      3 "POST/Pings.php
+      3 "POST/phpStudy.php
+      3 "POST/phpstudy.php
+      3 "POST/phplil.php
+      3 "POST/phpini.php
+      3 "POST/phpinfi.php
+      3 "POST/phpinf0.php
+      3 "POST/.php
+      3 "POST/pe.php
+      3 "POST/pass.php
+      3 "POST/pagefile.php
+      3 "POST/p34ky1337.php
+      3 "POST/oumi.php
+      3 "POST/ou2.php
+      3 "POST/orange.php
+      3 "POST/o.php
+      3 "POST/ooo23.php
+      3 "POST/ooi.php
+      3 "POST/olelist.php
+      3 "POST/ok.php
+      3 "POST/okokok.php
+      3 "POST/nuoxi.php
+      3 "POST/no.php
+      3 "POST/nnn.php
+      3 "POST/nnb.php
+      3 "POST/nidage.php
+      3 "POST/neko.php
+      3 "POST/nb.php
+      3 "POST/n24.php
+      3 "POST/n23.php
+      3 "POST/mz.php
+      3 "POST/mysql.php
+      3 "POST/mybestloves.php
+      3 "POST/mx.php
+      3 "POST/mutuba.php
+      3 "POST/muma.php
+      3 "POST/m.php?pbid=open
+      3 "POST/m.php
+      3 "POST/Moxin.PHP
+      3 "POST/mo.php
+      3 "POST/mobai.PHP
+      3 "POST/mmp.php
+      3 "POST/ml.php
+      3 "POST/min.php
+      3 "POST/miao.php
+      3 "POST/meng.php
+      3 "POST/mazi.php
+      3 "POST/lz.php
+      3 "POST/lx.php
+      3 "POST/luso.php
+      3 "POST/luoran.php
+      3 "POST/luoran6.php
+      3 "POST/luoke.php
+      3 "POST/lost.php
+      3 "POST/logo.php
+      3 "POST/log1.php
+      3 "POST/lm.php
+      3 "POST/lmn.php
+      3 "POST/ll.php
+      3 "POST/llld.php
+      3 "POST/lkio.php
+      3 "POST/ljb.php
+      3 "POST/linuxse.php
+      3 "POST/linux.php
+      3 "POST/linux1.php
+      3 "POST/linkx.php
+      3 "POST/linkr.php
+      3 "POST/link.php
+      3 "POST/lindex.php
+      3 "POST/liangchen.php
+      3 "POST/lequ.php
+      3 "POST/ldw.php
+      3 "POST/lapan.php
+      3 "POST/laobiao.php
+      3 "POST/lanke.php
+      3 "POST/l8.php
+      3 "POST/l7.php
+      3 "POST/l6.php
+      3 "POST/kvast.php
+      3 "POST/ks1.php
+      3 "POST/kpl.php
+      3 "POST/kkl.php
+      3 "POST/key.php
+      3 "POST/jyyy.php
+      3 "POST/jy.php
+      3 "POST/juji.php
+      3 "POST/jsc.php.php
+      3 "POST/j.php
+      3 "POST/jkl.php
+      3 "POST/jjj.php
+      3 "POST/jj1.php
+      3 "POST/ji.php
+      3 "POST/jing.php
+      3 "POST/jiaochi.php
+      3 "POST/jb.php
+      3 "POST/jbb.php
+      3 "POST/ip.php
+      3 "POST/ioi.php
+      3 "POST/infoo.php
+      3 "POST/info8.php
+      3 "POST/info1.php
+      3 "POST/indexbak.php
+      3 "POST/indexa.php
+      3 "POST/index1.php
+      3 "POST/inde.php
+      3 "POST/indax.php
+      3 "POST/incs.php
+      3 "POST/inc.php
+      3 "POST/include/tags.php
+      3 "POST/include/data/tags.php
+      3 "POST/images/swfupload/tags.php
+      3 "POST/images/entyy.php
+      3 "POST/images/defau1t.php
+      3 "POST/images/asp.php
+      3 "POST/images/1.php
+      3 "POST/images/1ndex.php
+      3 "POST/iis.php
+      3 "POST/igo.php
+      3 "POST/Hzllaga.php
+      3 "POST/HX.php
+      3 "POST/htfr.php
+      3 "POST/hm.php
+      3 "POST/hl.php
+      3 "POST/hh.php
+      3 "POST/hhh.php
+      3 "POST/hgx.php
+      3 "POST/help.php
+      3 "POST/hannan.php
+      3 "POST/hades.php
+      3 "POST/hacly.php
+      3 "POST/h1.php
+      3 "POST/h156.php
+      3 "POST/guipu.php
+      3 "POST/guai.php
+      3 "POST/gsy.php
+      3 "POST/g.php
+      3 "POST/go.php
+      3 "POST/godkey.php
+      3 "POST/.git.php
+      3 "POST/gg.php
+      3 "POST/general.php
+      3 "POST/ganzhuolang.php
+      3 "POST/ganshiqiang.php
+      3 "POST/fx.php
+      3 "POST/fusheng.php
+      3 "POST/function.inc.php
+      3 "POST/fuck.php
+      3 "POST/forums.php
+      3 "POST/forums/index.php
+      3 "POST/forum.php
+      3 "POST/forum/index.php
+      3 "POST/ffr.php
+      3 "POST/feixiang.php
+      3 "POST/fdgq.php
+      3 "POST/fb.php
+      3 "POST/fantao.php
+      3 "POST/fans.php
+      3 "POST/fack.php
+      3 "POST/erwa.php
+      3 "POST/errors/processor.php
+      3 "POST/errors.php
+      3 "POST/error.php
+      3 "POST/erba.php
+      3 "POST/edmin.php
+      3 "POST/ecmsmod.php
+      3 "POST/duke.php
+      3 "POST/d.php
+      3 "POST/dong.php
+      3 "POST/DJ.php
+      3 "POST/diy.php
+      3 "POST/dexgp.php
+      3 "POST/defect.php
+      3 "POST/default.php
+      3 "POST/db_session.init.php
+      3 "POST/db.php
+      3 "POST/db.init.php
+      3 "POST/db__.init.php
+      3 "POST/db_desql.php
+      3 "POST/db_dataml.php
+      3 "POST/datas.php
+      3 "POST/data/admin/help.php
+      3 "POST/dashu.php
+      3 "POST/cxfm666.php
+      3 "POST/cs.php
+      3 "POST/cron.php
+      3 "POST/core.php
+      3 "POST/coon.php
+      3 "POST/Config_Shell.php
+      3 "POST/.config.php
+      3 "POST/config.inc.php
+      3 "POST/confie.php
+      3 "POST/conf1g.php
+      3 "POST/cn.php
+      3 "POST/class1.php
+      3 "POST/ci.php
+      3 "POST/chaoda.php
+      3 "POST/ceshi.php
+      3 "POST/cer.php
+      3 "POST/cere.php
+      3 "POST/ce.PHP
+      3 "POST/CC.php
+      3 "POST/cc.php
+      3 "POST/CCC.PHP
+      3 "POST/CCCC.PHP
+      3 "POST/caonma.php
+      3 "POST/cainiao.php
+      3 "POST/cadre.php
+      3 "POST/bx.php
+      3 "POST/buluya.php
+      3 "POST/boots.php
+      3 "POST/bn.php
+      3 "POST/blog/xmlrpc.php
+      3 "POST/beimeng.php
+      3 "POST/bbv.php
+      3 "POST/bbs.php
+      3 "POST/bbs/index.php
+      3 "POST/bbr.php
+      3 "POST/bbqq.php
+      3 "POST/bbq.php
+      3 "POST/bb.php
+      3 "POST/bak.php
+      3 "POST/back.php
+      3 "POST/aw.php
+      3 "POST/avast.php
+      3 "POST/autoloader.php
+      3 "POST/asen.php
+      3 "POST/aotu.php
+      3 "POST/aotu7.php
+      3 "POST/aotian.php
+      3 "POST/aojiao.php
+      3 "POST/anyi.php
+      3 "POST/angge.php
+      3 "POST/alipay.php
+      3 "POST/Alarg53.php
+      3 "POST/ak.php
+      3 "POST/ak48.php
+      3 "POST/ak47.php
+      3 "POST/ag.php
+      3 "POST/afafaf.php
+      3 "POST/admn.php
+      3 "POST/administrator/webconfig.txt.php
+      3 "POST/Administrator.php
+      3 "POST/admin1.php
+      3 "POST/ack.php
+      3 "POST/about_ver.php
+      3 "POST/about.php
+      3 "POST/abc.php
+      3 "POST/abc776.php
+      3 "POST/abak.php
+      3 "POST/aap.php
+      3 "POST/aaaa.php
+      3 "POST/aaaaaa1.php
+      3 "POST/a411.php
+      3 "POST/9.php
+      3 "POST/999.php
+      3 "POST/98k.php
+      3 "POST/987.php
+      3 "POST/981.php
+      3 "POST/9678.php
+      3 "POST/9510.php
+      3 "POST/92.php
+      3 "POST/888.php
+      3 "POST/887.php
+      3 "POST/803.php
+      3 "POST/7o.php
+      3 "POST/789056.php
+      3 "POST/777.php
+      3 "POST/%75%73%65%72/%72%65%67%69%73%74%65%72?%65%6c%65%6d%65%6e%74%5f%70%61%72%65%6e%74%73=%74%69%6d%65%7a%6f%6e%65%2f%74%69%6d%65%7a%6f%6e%65%2f%23%76%61%6c%75%65&%61%6a%61%78%5f%66%6f%72%6d=1&%5f%77%72%61%70%70%65%72%5f%66%6f%72%6d%61%74=%64%72%75%70%61%6c%5f%61%6a%61%78
+      3 "POST/%75%73%65%72%2e%70%68%70
+      3 "POST/6.php
+      3 "POST/666.php
+      3 "POST/666666.php
+      3 "POST/605.php
+      3 "POST/56.php
+      3 "POST/520.php
+      3 "POST/5201314.php
+      3 "POST/51.php
+      3 "POST/51314.php
+      3 "POST/4.php
+      3 "POST/4o4.php
+      3 "POST/444.php
+      3 "POST/421.php
+      3 "POST/415.php
+      3 "POST/411.php
+      3 "POST/404.php
+      3 "POST/_404.php
+      3 "POST/1q.php
+      3 "POST/1hou.php
+      3 "POST/15.php
+      3 "POST/159.php
+      3 "POST/1556189185.php
+      3 "POST/1234.php
+      3 "POST/12345.php
+      3 "POST/1213.php
+      3 "POST/11a.php
+      3 "POST/1111.php
+      3 "POST/099.php
+      3 "POST/02.php
+      3 "GET/zzz.php
+      3 "GET/zz.php
+      3 "GET/z.php
+      3 "GET/yuyang.php
+      3 "GET/yu.php
+      3 "GET/xsser.php
+      3 "GET/x.php
+      3 "GET/xiu.php
+      3 "GET/xiaxia.php
+      3 "GET/xiaoxia.php
+      3 "GET/xampp/phpmyadmin/index.php
+      3 "GET/WWW/phpMyAdmin/index.php
+      3 "GET/www/phpMyAdmin/index.php
+      3 "GET/wpo.php
+      3 "GET/wpc.php
+      3 "GET/wp-content/plugins/portable-phpmyadmin/wp-pma-mod/index.php
+      3 "GET/wp-config.php
+      3 "GET/woshimengmei.php
+      3 "GET/websql/index.php
+      3 "GET/web/phpMyAdmin/index.php
+      3 "GET/webdav/
+      3 "GET/weathermap/editor.php
+      3 "GET/v/index.php
+      3 "GET/up.php
+      3 "GET/uploader.php
+      3 "GET/undx.php
+      3 "GET/typo3/phpmyadmin/index.php
+      3 "GET/tools/phpMyAdmin/index.php
+      3 "GET/text.php
+      3 "GET/taisui.php
+      3 "GET/t6nv.php
+      3 "GET/SQL/index.php
+      3 "GET/sql/index.php
+      3 "GET/sqladmin/index.php
+      3 "GET/spider.php
+      3 "GET/s/index.php
+      3 "GET/shopdb/index.php
+      3 "GET/shaAdmin/index.php
+      3 "GET/secure/ContactAdministrators!default.jspa
+      3 "GET/scripts/setup.php
+      3 "GET/scripts/db___.init.php
+      3 "GET/sbb/index.php
+      3 "GET/sane.php
+      3 "GET/rxr.php
+      3 "GET/root.php
+      3 "GET/root11.php
+      3 "GET/_query.php
+      3 "GET/python.php
+      3 "GET/pwd/index.php
+      3 "GET/program/index.php
+      3 "GET/pmd_online.php
+      3 "GET/pmd/index.php
+      3 "GET/PMA/scripts/setup.php
+      3 "GET/pma/scripts/setup.php
+      3 "GET/PMA/scripts/db___.init.php
+      3 "GET/pma/scripts/db___.init.php
+      3 "GET/pma-old/index.php
+      3 "GET/pmamy/index.php
+      3 "GET/pmamy2/index.php
+      3 "GET/PMA/index.php
+      3 "GET/pma/index.php
+      3 "GET/PMA2/index.php
+      3 "GET/plugins/weathermap/editor.php
+      3 "GET/phppma/index.php
+      3 "GET/phpNyAdmin/index.php
+      3 "GET/phpmy/index.php
+      3 "GET/phpMydmin/index.php
+      3 "GET/phpMyAdmln/index.php
+      3 "GET/phpMyAdmion/index.php
+      3 "GET/phpMyAdmins/index.php
+      3 "GET/phpMyAdmin/scripts/setup.php
+      3 "GET/phpmyadmin/scripts/setup.php
+      3 "GET/phpMyAdmin/scripts/db___.init.php
+      3 "GET/phpmyadmin/scripts/db___.init.php
+      3 "GET/phpMyAdmin/phpMyAdmin/index.php
+      3 "GET/phpmyadmin/phpmyadmin/index.php
+      3 "GET/phpMyAdminold/index.php
+      3 "GET/phpMyAdmin.old/index.php
+      3 "GET/phpmyadmin-old/index.php
+      3 "GET/phpMyAdminn/index.php
+      3 "GET/phpMyAdmin+++---/index.php
+      3 "GET/phpMyAdmin._/index.php
+      3 "GET/phpMyAdmin/index.php
+      3 "GET/phpMyAdmin__/index.php
+      3 "GET/__phpMyAdmin/index.php
+      3 "GET/phpmyadmin/index.php
+      3 "GET/phpMyAdminhf/index.php
+      3 "GET/phpMyadmin_bak/index.php
+      3 "GET/phpMyAdmina/index.php
+      3 "GET/phpMyAdmin_ai/index.php
+      3 "GET/phpMyAdmin4.8.5/index.php
+      3 "GET/phpMyAdmin4.8.4/index.php
+      3 "GET/phpMyAdmin4.8.3/index.php
+      3 "GET/phpMyAdmin4.8.2/index.php
+      3 "GET/phpMyAdmin4.8.1/index.php
+      3 "GET/phpMyAdmin4.8.0/index.php
+      3 "GET/phpMyAdmin-4.4.0/index.php
+      3 "GET/phpmyadmin3333/index.php
+      3 "GET/phpMyAdmin._2/index.php
+      3 "GET/phpmyadmin2/index.php
+      3 "GET/phpmyadmin2222/index.php
+      3 "GET/phpMyAdmin1/index.php
+      3 "GET/phpmyadmin1/index.php
+      3 "GET/phpMyAdmin123/index.php
+      3 "GET/phpMyAdmin_111/index.php
+      3 "GET/phpmyadmin0/index.php
+      3 "GET/phpMyadmi/index.php
+      3 "GET/phpMyAdm1n/index.php
+      3 "GET/phpmyadm1n/index.php
+      3 "GET/phpMyAbmin/index.php
+      3 "GET/phpma/index.php
+      3 "GET/phpmadmin/index.php
+      3 "GET/phpinfo.php
+      3 "GET/phpiMyAdmin/index.php
+      3 "GET/phpdm.php
+      3 "GET/phpAdmin/index.php
+      3 "GET/phpadmin/index.php
+      3 "GET/php2MyAdmin/index.php
+      3 "GET/no1.php
+      3 "GET/new_license.php
+      3 "GET/mysql/sqlmanager/index.php
+      3 "GET/mysql/mysqlmanager/index.php
+      3 "GET/mysql/index.php
+      3 "GET/mysql/dbadmin/index.php
+      3 "GET/MySQLAdmin/index.php
+      3 "GET/mysqladmin/index.php
+      3 "GET/mysql/admin/index.php
+      3 "GET/mysql-admin/index.php
+      3 "GET/mysql_admin/index.php
+      3 "GET/MyAdmin/scripts/setup.php
+      3 "GET/myadmin/scripts/setup.php
+      3 "GET/MyAdmin/scripts/db___.init.php
+      3 "GET/myadmin/scripts/db___.init.php
+      3 "GET/MyAdmin/index.php
+      3 "GET/myadmin/index.php
+      3 "GET/myadmin2/index.php
+      3 "GET/muhstiks.php
+      3 "GET/muhstik-dpr.php
+      3 "GET/muhstik2.php
+      3 "GET/mjx.php
+      3 "GET/meijianxue.php
+      3 "GET/manager/html
+      3 "GET/l.php
+      3 "GET/lol.php
+      3 "GET/log.php
+      3 "GET/logon.php
+      3 "GET/license.php
+      3 "GET/laravel.php
+      3 "GET/lang.php?f=1
+      3 "GET/lala.php
+      3 "GET/lala-dpr.php
+      3 "GET/knal.php
+      3 "GET/kk.php
+      3 "GET/java.php
+      3 "GET/index.php?s=/module/action/param1/${@die(md5(HelloThinkPHP))}
+      3 "GET/index.php?s=%2f%69%6e%64%65%78%2f%5c%74%68%69%6e%6b%5c%61%70%70%2f%69%6e%76%6f%6b%65%66%75%6e%63%74%69%6f%6e&function=%63%61%6c%6c%5f%75%73%65%72%5f%66%75%6e%63%5f%61%72%72%61%79&vars[0]=%6d%645&vars[1][]=%48%65%6c%6c%6f%54%68%69%6e%6b%50%48%50
+      3 "GET/index.php/module/action/param1/${@die(md5(HelloThinkPHP))}
+      3 "GET/index.php
+      3 "GET/indea.php
+      3 "GET/images/vuln.php
+      3 "GET/images/up.php
+      3 "GET/images/stories/filemga.php?ssp=RfVbHu
+      3 "GET/images/stories/cmd.php
+      3 "GET/images/!.php
+      3 "GET/images/jsspwneed.php
+      3 "GET/images/attari.php
+      3 "GET/huoshan.php
+      3 "GET/hue2.php
+      3 "GET/htdocs.php
+      3 "GET/hs.php
+      3 "GET/home.php
+      3 "GET/hhhhhh.php
+      3 "GET/help.php
+      3 "GET/help-e.php
+      3 "GET/hell.php
+      3 "GET/hd.php
+      3 "GET/ftmabc.php
+      3 "GET/floaw.php
+      3 "GET/elrekt.php?s=%2f%69%6e%64%65%78%2f%5c%74%68%69%6e%6b%5c%61%70%70%2f%69%6e%76%6f%6b%65%66%75%6e%63%74%69%6f%6e&function=%63%61%6c%6c%5f%75%73%65%72%5f%66%75%6e%63%5f%61%72%72%61%79&vars[0]=%6d%645&vars[1][]=%48%65%6c%6c%6f%54%68%69%6e%6b%50%48%50
+      3 "GET/Drupal.php
+      3 "GET/dp.php
+      3 "GET/download/index.php
+      3 "GET/doudou.php
+      3 "GET/desktop.ini.php
+      3 "GET/db_pma.php
+      3 "GET/db/index.php
+      3 "GET/db_cts.php
+      3 "GET/dbadmin/index.php
+      3 "GET/d7.php
+      3 "GET/coonig.php
+      3 "GET/composers.php
+      3 "GET/composer.php
+      3 "GET/cmv.php
+      3 "GET/cmdd.php
+      3 "GET/claroline/phpMyAdmin/index.php
+      3 "GET/cacti/plugins/weathermap/editor.php
+      3 "GET/b.php
+      3 "GET/baidoubi.php
+      3 "GET/appserv.php
+      3 "GET/App/?content=die(md5(HelloThinkPHP))
+      3 "GET/ak.php
+      3 "GET/admin/PMA/index.php
+      3 "GET/admin/pma/index.php
+      3 "GET/admin/phpMyAdmin/index.php
+      3 "GET/admin/phpmyadmin/index.php
+      3 "GET/admin/phpmyadmin2/index.php
+      3 "GET/admin/mysql/index.php
+      3 "GET/admin/mysql2/index.php
+      3 "GET/admin/index.php
+      3 "GET/99.php
+      3 "GET/%73%65%65%79%6F%6E/%68%74%6D%6C%6F%66%66%69%63%65%73%65%72%76%6C%65%74
+      3 "GET/5678.php
+      3 "GET/321/index.php
+      3 "GET/1x.php
+      3 "GET/1ts.php
+      3 "GET/1/index.php
+      3 "GET/123131/index.php
+      2 "POST/editBlackAndWhiteList
+      2 "GET/TP/public/index.php
+      2 "GET/TP/index.php
+      2 "GET/TP/html/public/index.php
+      2 "GET/thinkphp/html/public/index.php
+      2 "GET/public/index.php
+      2 "GET/html/public/index.php
+      2 "GET/.env
+      1 "GET/wp-login.php
+      1 "GET/sitemap.xml
+      1 "GEThttp://www.proxylists.net/proxyjudge.php
+      1 "GET/elrekt.php
+      1 "GET/%3Cforensics/bsa.pl
+____________________________________________________________________________________________________________________
+vishalsingh@loki:~/3380/lab1 [vishalsingh@loki lab1]$ ./part2-1.sh system_logs_backup*
+Web log analysis completed. Results are stored in all_invalid_pages.txt and top_ten_404_pages.txt
+
+vishalsingh@loki:~/3380/lab1 [vishalsingh@loki lab1]$ cat top_ten_404_pages.txt
+6805"GET/robots.txt
+4402"POST/1.php
+4286"POST/qq.php
+3638"POST/test.php
+2809"POST/confg.php
+2352"POST/x.php
+2351"HEAD/robots.txt
+2230"POST/q.php
+1839"POST/xx.php
+1831"POST/api.php
+_____________________________________________________________________________________________________________________
+vishalsingh@loki:~/3380/lab1 [vishalsingh@loki lab1]$ cat part2-2.sh
+#!/bin/bash
+
+# Definining the log directory
+LOG_DIR="/home/COIS/3380/lab1"
+
+# Defining the output file for top 10 IPs
+top_10_IPs_output_file="top_10_IPs.txt"
+
+# Check if log file specification is provided as a command-line argument
+if [ "$#" -ne 1 ]; then
+    echo "Usage: $0 <log_file_specification>"
+    exit 1
+fi
+
+# Log file specification from command-line argument
+LOG_FILE_SPEC="$1"
+
+# Extracting and counting the IP addresses that are associated with "404" page requests
+grep ' 404 ' $LOG_DIR/$LOG_FILE_SPEC | grep -o '[0-9]\{1,3\}\.[0-9]\{1,3\}\.[0-9]\{1,3\}\.[0-9]\{1,3\}' | sort | uniq -c | sort -nr | head -n 10  > "$top_10_IPs_output_file"
+
+# Displaying the top 10 IP addresses
+echo "Top 10 IP addresses with the most 404 page requests:"
+head -n 10 "$top_10_IPs_output_file"
+
+# Retrieving the geolocation information for the top 2 IP addresses
+top_2_ips=($(awk '{print $2}' "$top_10_IPs_output_file" | head -n 2))
+for ip_address in "${top_2_ips[@]}"; do
+  echo "Retrieving the geolocation for IP: $ip_address"
+  wget -qO- http://ipinfo.io/"$ip_address"
+  echo -e "\n"
+done
+_________________________________________________________________________________________________________________________
+vishalsingh@loki:~/3380/lab1 [vishalsingh@loki lab1]$ ./part2-2.sh system_logs_backup_2019-11-04_access.log.3
+
+Top 10 IP addresses with the most 404 page requests:
+    892 192.169.231.213
+    892 106.12.123.186
+    891 101.51.106.223
+      7 106.13.116.111
+      6 120.92.123.150
+      3 157.55.39.245
+      2 46.4.65.7
+      2 157.55.39.61
+      2 157.230.137.113
+      1 95.80.215.170
+Retrieving the geolocation for IP: 192.169.231.213
+{
+  "ip": "192.169.231.213",
+  "hostname": "213.231.169.192.host.secureserver.net",
+  "city": "Chandler",
+  "region": "Arizona",
+  "country": "US",
+  "loc": "33.3062,-111.8413",
+  "org": "AS26496 GoDaddy.com, LLC",
+  "postal": "85246",
+  "timezone": "America/Phoenix",
+  "readme": "https://ipinfo.io/missingauth"
+}
+
+Retrieving the geolocation for IP: 106.12.123.186
+{
+  "ip": "106.12.123.186",
+  "city": "Guangzhou",
+  "region": "Guangdong",
+  "country": "CN",
+  "loc": "23.1167,113.2500",
+  "org": "AS38365 Beijing Baidu Netcom Science and Technology Co., Ltd.",
+  "timezone": "Asia/Shanghai",
+  "readme": "https://ipinfo.io/missingauth"
+}
+_______________________________________________________________________________________________________________________
+vishalsingh@loki:~/3380/lab1 [vishalsingh@loki lab1]$ ./part2-2.sh system_logs_backup*
+Top 10 IP addresses with the most 404 page requests:
+   5206 192.75.12.69
+   5001 129.211.4.119
+   3738 101.51.106.223
+   2892 62.165.50.254
+   2844 103.106.246.18
+   2838 62.83.85.12
+   2784 129.28.149.86
+   2730 45.88.12.25
+   2730 103.235.231.92
+   2727 193.134.208.11
+Retrieving the geolocation for IP: 192.75.12.69
+{
+  "ip": "192.75.12.69",
+  "hostname": "boneshaker.trentu.ca",
+  "city": "Haliburton Village",
+  "region": "Ontario",
+  "country": "CA",
+  "loc": "45.0492,-78.5085",
+  "org": "AS32638 Trent University",
+  "postal": "K0J",
+  "timezone": "America/Toronto",
+  "readme": "https://ipinfo.io/missingauth"
+}
+
+Retrieving the geolocation for IP: 129.211.4.119
+{
+  "ip": "129.211.4.119",
+  "city": "Shanghai",
+  "region": "Shanghai",
+  "country": "CN",
+  "loc": "31.2222,121.4581",
+  "org": "AS45090 Shenzhen Tencent Computer Systems Company Limited",
+  "timezone": "Asia/Shanghai",
+  "readme": "https://ipinfo.io/missingauth"
+}
+
+vishalsingh@loki:~/3380/lab1 [vishalsingh@loki lab1]$ exit
+exit
+
+Script done on Mon 29 Jan 2024 09:14:45 PM EST

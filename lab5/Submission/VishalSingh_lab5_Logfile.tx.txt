@@ -1,0 +1,110 @@
+
+[vishalsingh@loki ~]$ cd 3380/lab5
+[vishalsingh@loki lab5]$ ls
+lab5  lab5.c  
+[vishalsingh@loki lab5]$ nano lab5.c
+[vishalsingh@loki lab5]$ gcc -o lab5 lab5.c
+
+//TERMINATION DUE TO SIGINT (PRESSED ^C MORE THAN 5 TIMES)
+[vishalsingh@loki lab5]$ ./lab5
+Wait for another signal ...
+^C This is the 1 time you pressed ctrl-c
+Wait for another signal ...
+^C This is the 2 time you pressed ctrl-c
+Wait for another signal ...
+^C This is the 3 time you pressed ctrl-c
+Wait for another signal ...
+^C This is the 4 time you pressed ctrl-c
+Wait for another signal ...
+^C This is the 5 time you pressed ctrl-c
+Wait for another signal ...
+^CMAXIMUM value exceeded. Deactivating SIGINT handler.
+^C
+
+(TERMINATION DUE TO SIGQUIT (CTRL^\ PRESSED AFTER CTRL^C))
+[vishalsingh@loki lab5]$ ./lab5
+Wait for another signal ...
+^C This is the 1 time you pressed ctrl-c
+Wait for another signal ...
+^\I am the child and I am sending a signal
+Child sent a signal so I guess you are bored, have a great day!
+You Pressed ^c 1 times.
+Program is Over, and Exiting Now.
+
+
+(CTRL^\ PRESSED AFTER STARTING THE PROGRAM)
+[vishalsingh@loki lab5]$ ./lab5
+Wait for another signal ...
+^\I am the child and I am sending a signal
+Child sent a signal so I guess you are bored, have a great day!
+You Pressed ^c 0 times.
+Program is Over, and Exiting Now.
+
+[vishalsingh@loki lab5]$
+
+
+(TERMINATION FROM SIGUSR1)
+[vishalsingh@loki lab5]$ ./lab5
+Wait for another signal ...
+^C This is the 1 time you pressed ctrl-c
+Wait for another signal ...
+^C This is the 2 time you pressed ctrl-c
+Wait for another signal ...
+^C This is the 3 time you pressed ctrl-c
+Wait for another signal ...
+^C This is the 4 time you pressed ctrl-c
+Wait for another signal ...
+^C This is the 5 time you pressed ctrl-c
+Wait for another signal ...
+^\I am the child and I am sending a signal
+Child sent a signal so I guess you are bored, have a great day!
+You Pressed ^c 5 times.
+Program is Over, and Exiting Now.
+
+
+[vishalsingh@loki lab5]$ ./lab5
+Wait for another signal ...
+^C This is the 1 time you pressed ctrl-c
+Wait for another signal ...
+^C This is the 2 time you pressed ctrl-c
+Wait for another signal ...
+^C This is the 3 time you pressed ctrl-c
+Wait for another signal ...
+^C This is the 4 time you pressed ctrl-c
+Wait for another signal ...
+^C This is the 5 time you pressed ctrl-c
+Wait for another signal ...
+^CMAXIMUM value exceeded. Deactivating SIGINT handler.
+^\I am the child and I am sending a signal
+Child sent a signal so I guess you are bored, have a great day!
+You Pressed ^c 5 times.
+Program is Over, and Exiting Now.
+
+[vishalsingh@loki lab5]$
+
+(INPUTING SOME GIBBERISH IN BETWEEN SIGNALS)
+[vishalsingh@loki lab5]$ ./lab5
+Wait for another signal ...
+^C This is the 1 time you pressed ctrl-c
+Wait for another signal ...
+^[[A^[[A^[[A^[[ANHHHHGFDXJGHKBVGSDGAJGdfsdsdk
+''kljbhjv
+bvggdzetgh^C This is the 2 time you pressed ctrl-c
+Wait for another signal ...
+cbmhdxhcvkh
+bhjvgjvubhk
+^[[Dcvcgfckh
+jgkghck^\I am the child and I am sending a signal
+Child sent a signal so I guess you are bored, have a great day!
+You Pressed ^c 2 times.
+Program is Over, and Exiting Now.
+
+
+
+
+(PROGRAM NEVER TERMINATED- NO SIGNALS SENT)
+[vishalsingh@loki lab5]$ ./lab5
+Wait for another signal ...
+
+
+

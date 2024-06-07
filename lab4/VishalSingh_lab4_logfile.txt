@@ -1,0 +1,618 @@
+Script started on Sun 10 Mar 2024 01:14:28 PM EDT
+
+[vishalsingh@loki lab4]$ ls
+lab4.c  VishalSingh_lab4_logfile.txt
+
+[vishalsingh@loki lab4]$ cat lab4.c
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <unistd.h>
+#include <sys/wait.h>
+
+#define MAX_COMMAND_LENGTH 100
+#define MAX_PARAMETER_LENGTH 50
+
+// Function to display the help info
+void help() {
+    printf(" -------------------------------------HELP-----------------------------------------\n");
+
+    printf(" Valid verbs are:\n");
+    printf(" help:                  Displays this text\n");
+    printf(" systeminfo:            Displays the System information.\n");
+    printf(" diskuse:               Shows the amount of disk being used in the current directory.\n");
+    printf(" drives:                Lists all of the ext4 mounted partitions as well as their size and free space.\n");
+    printf(" processinfo:           Displays information about All the running processes.\n");
+    printf(" findprocess [process]: Displays information about the specified process. If not present, searches for 'root'.\n");
+    printf(" jobtree [username]:    Shows the processes running related to a specific username.\n");
+    printf(" exit:                  Exits this shell and returns to your original shell.\n");
+    printf(" NOTE: Elements in square brackets are optional and verbs are Case-Sensitive\n");
+}
+// Function to execute a command with or without parameters creating processes
+void executeCommand(char *command, char *parameter) {
+    pid_t pid = fork();
+
+    if (pid < 0) {
+        perror("Fork failed");
+        exit(EXIT_FAILURE);
+    } else if (pid == 0) { // A Child process
+        if (strcmp(command, "help") == 0) {
+            help();
+        } else {
+            char *args[4];
+            args[0] = strdup("/bin/bash");
+            args[1] = strdup("-c");
+            args[2] = strdup(command);
+
+            if (parameter != NULL) {
+                args[3] = strdup(parameter);
+                args[4] = NULL;
+            } else {
+                args[3] = NULL;
+            }
+
+            execv(args[0], args);
+            perror("Execv failed");
+            exit(EXIT_FAILURE);
+        }
+    } else { // the Parent process
+        wait(NULL);//This wait(NULL) call in the parent process ensures that it waits for the child process to finish before continuing
+    }
+}
+// Function to display disk usage information
+void diskuse() {
+    executeCommand("du -sch", NULL);
+}
+// Function to display the system information
+void systeminfo() {
+    executeCommand("uname -a", NULL);
+}
+// Function to display info about the  mounted drives
+void drives() {
+    executeCommand("df -h -t ext4", NULL);
+}
+
+//Function to display process tree related to a specific username
+void jobtree(const char *username) {
+    char command[MAX_COMMAND_LENGTH];
+    if (username == NULL) {
+        snprintf(command, sizeof(command), "ps -o user:32,pid,stime,tty,cmd -U vishalsingh --forest");
+    } else {
+        snprintf(command, sizeof(command), "ps -o \"user:32,pid,stime,tty,cmd\" -U %s --forest", username);
+    }
+    system(command);
+}
+
+// Function to display information about all the running processes
+void processinfo() {
+    executeCommand("ps aux", NULL);
+}
+
+// Function to display information about a specified process or 'root' if not specified
+void findprocess(const char *process) {
+    if (process == NULL) {
+        printf("Note: No Process provided so using the root as default process\n");
+        process = "root";
+    }
+
+    char command[MAX_COMMAND_LENGTH];
+    snprintf(command, sizeof(command), "ps aux | grep %s", process);
+    executeCommand(command, NULL);
+}
+// Main Function 
+int main() {
+    char input[MAX_COMMAND_LENGTH];
+
+    printf("Welcome to VI- shell by Vishal! Type 'help' for a list of valid commands.\n");
+
+    while (1) {
+	printf("Verb >> ");
+
+        if (fgets(input, sizeof(input), stdin) == NULL) {
+            break; // Exit if there's an error reading input
+        }
+        input[strcspn(input, "\n")] = '\0'; // Remove trailing newline
+
+        // Tokenize input
+        char *verb = strtok(input, " ");
+        char *username = strtok(NULL, " ");
+
+        // Execute corresponding verb
+        if (strcmp(verb, "exit") == 0) {
+	    system("ps -ef | grep -e $USER > /dev/null 2>&1");
+            printf("Exiting VI-Shell. Bye, Be back Soon....!\n");
+            break;
+        } else if (strcmp(verb, "help") == 0) {
+            help();
+        } else if (strcmp(verb, "diskuse") == 0) {
+            diskuse();
+        } else if (strcmp(verb, "systeminfo") == 0) {
+ 	   systeminfo();
+        } else if (strcmp(verb, "drives") == 0) {
+            drives();
+        } else if (strcmp(verb, "jobtree") == 0) {
+            jobtree(username);
+	}else if (strcmp(verb, "processinfo")==0){
+	    processinfo();
+        } else if (strcmp(verb, "findprocess") == 0) {
+            findprocess(username);
+        } else {
+            printf("Invalid verb. Type 'help' for a list of valid verbs.\n");
+        }
+
+    }
+
+    return 0;
+
+}
+
+vishalsingh@loki:~/3380/lab4[vishalsingh@loki lab4]$ gcc -o lab4 lab4.c
+
+vishalsingh@loki:~/3380/lab4[vishalsingh@loki lab4]$ ls
+lab4 lab4.c  VishalSingh_lab4_logfile.txt
+
+vishalsingh@loki:~/3380/lab4[vishalsingh@loki lab4]$ ./lab4
+
+Welcome to VI- shell by Vishal! Type 'help' for a list of valid commands.
+Verb >> help
+ -------------------------------------HELP-----------------------------------------
+ Valid verbs are:
+ help:                  Displays this text
+ systeminfo:            Displays the System information.
+ diskuse:               Shows the amount of disk being used in the current directory.
+ drives:                Lists all of the ext4 mounted partitions as well as their size and free space.
+ processinfo:           Displays information about All the running processes.
+ findprocess [process]: Displays information about the specified process. If not present, searches for 'root'.
+ jobtree [username]:    Shows the processes running related to a specific username.
+ exit:                  Exits this shell and returns to your original shell.
+ NOTE: Elements in square brackets are optional and verbs are Case-Sensitive
+Verb >> systeminfo
+Linux loki.trentu.ca 3.10.0-1160.108.1.el7.x86_64 #1 SMP Thu Jan 25 16:17:31 UTC 2024 x86_64 x86_64 x86_64 GNU/Linux
+Verb >> diskuse
+32K	.
+32K	total
+Verb >> drives
+Filesystem      Size  Used Avail Use% Mounted on
+/dev/sda3        28G   20G  7.1G  74% /
+/dev/sdb1        20G  8.8G  9.9G  48% /var
+/dev/sdd1        35G   24G  9.6G  71% /home
+/dev/sda1       976M  269M  641M  30% /boot
+/dev/sdf1        35G   49M   33G   1% /home/grading
+Verb >> processinfo
+USER       PID %CPU %MEM    VSZ   RSS TTY      STAT START   TIME COMMAND
+root         1  0.1  0.2 128424  4392 ?        Ss   Mar09   1:49 /usr/lib/systemd/systemd --switched-root --system --deserialize 22
+root         2  0.0  0.0      0     0 ?        S    Mar09   0:00 [kthreadd]
+root         4  0.0  0.0      0     0 ?        S<   Mar09   0:00 [kworker/0:0H]
+root         6  1.9  0.0      0     0 ?        S    Mar09  33:48 [ksoftirqd/0]
+root         7  0.0  0.0      0     0 ?        S    Mar09   0:02 [migration/0]
+root         8  0.0  0.0      0     0 ?        S    Mar09   0:00 [rcu_bh]
+root         9  0.1  0.0      0     0 ?        S    Mar09   1:55 [rcu_sched]
+root        10  0.0  0.0      0     0 ?        S<   Mar09   0:00 [lru-add-drain]
+root        11  0.0  0.0      0     0 ?        S    Mar09   0:05 [watchdog/0]
+root        12  0.0  0.0      0     0 ?        S    Mar09   0:01 [watchdog/1]
+root        13  0.0  0.0      0     0 ?        S    Mar09   0:00 [migration/1]
+root        14  2.1  0.0      0     0 ?        S    Mar09  37:18 [ksoftirqd/1]
+root        16  0.0  0.0      0     0 ?        S<   Mar09   0:00 [kworker/1:0H]
+root        18  0.0  0.0      0     0 ?        S    Mar09   0:00 [kdevtmpfs]
+root        19  0.0  0.0      0     0 ?        S<   Mar09   0:00 [netns]
+root        20  0.0  0.0      0     0 ?        S    Mar09   0:00 [khungtaskd]
+root        21  0.0  0.0      0     0 ?        S<   Mar09   0:00 [writeback]
+root        22  0.0  0.0      0     0 ?        S<   Mar09   0:00 [kintegrityd]
+root        23  0.0  0.0      0     0 ?        S<   Mar09   0:00 [bioset]
+root        24  0.0  0.0      0     0 ?        S<   Mar09   0:00 [bioset]
+root        25  0.0  0.0      0     0 ?        S<   Mar09   0:00 [bioset]
+root        26  0.0  0.0      0     0 ?        S<   Mar09   0:00 [kblockd]
+root        27  0.0  0.0      0     0 ?        S<   Mar09   0:00 [md]
+root        28  0.0  0.0      0     0 ?        S<   Mar09   0:00 [edac-poller]
+root        29  0.0  0.0      0     0 ?        S<   Mar09   0:00 [watchdogd]
+root        35  0.0  0.0      0     0 ?        S    Mar09   0:01 [kswapd0]
+root        36  0.0  0.0      0     0 ?        SN   Mar09   0:00 [ksmd]
+root        37  0.0  0.0      0     0 ?        SN   Mar09   0:00 [khugepaged]
+root        38  0.0  0.0      0     0 ?        S<   Mar09   0:00 [crypto]
+root        46  0.0  0.0      0     0 ?        S<   Mar09   0:00 [kthrotld]
+root        48  0.0  0.0      0     0 ?        S<   Mar09   0:00 [kmpath_rdacd]
+root        49  0.0  0.0      0     0 ?        S<   Mar09   0:00 [kaluad]
+root        51  0.0  0.0      0     0 ?        S<   Mar09   0:00 [kpsmoused]
+root        52  0.0  0.0      0     0 ?        S<   Mar09   0:00 [ipv6_addrconf]
+root        66  0.0  0.0      0     0 ?        S<   Mar09   0:00 [deferwq]
+root       101  0.0  0.0      0     0 ?        S    Mar09   0:00 [kauditd]
+root       242  0.0  0.0      0     0 ?        S    Mar09   0:00 [scsi_eh_0]
+root       243  0.0  0.0      0     0 ?        S<   Mar09   0:00 [scsi_tmf_0]
+root       244  0.0  0.0      0     0 ?        S<   Mar09   0:00 [vmw_pvscsi_wq_0]
+root       246  0.0  0.0      0     0 ?        S<   Mar09   0:00 [ata_sff]
+root       248  0.0  0.0      0     0 ?        S<   Mar09   0:00 [nfit]
+root       250  0.0  0.0      0     0 ?        S    Mar09   0:00 [scsi_eh_1]
+root       261  0.0  0.0      0     0 ?        S<   Mar09   0:00 [scsi_tmf_1]
+root       268  0.0  0.0      0     0 ?        S    Mar09   0:00 [scsi_eh_2]
+root       272  0.0  0.0      0     0 ?        S<   Mar09   0:00 [scsi_tmf_2]
+root       283  0.0  0.0      0     0 ?        S    Mar09   0:00 [irq/16-vmwgfx]
+root       284  0.0  0.0      0     0 ?        S<   Mar09   0:00 [ttm_swap]
+root       293  0.0  0.0      0     0 ?        S<   Mar09   0:00 [kworker/1:1H]
+root       301  0.0  0.0      0     0 ?        S    Mar09   0:00 [jbd2/sda3-8]
+root       302  0.0  0.0      0     0 ?        S<   Mar09   0:00 [ext4-rsv-conver]
+kobiejoh   357  0.0  0.0   4224   544 pts/8    T    12:43   0:00 ./lab4shell
+root       380  0.0  0.2  39164  4596 ?        Ss   Mar09   0:37 /usr/lib/systemd/systemd-journald
+root       403  0.0  0.0 119180     0 ?        Ss   Mar09   0:00 /usr/sbin/lvmetad -f
+root       416  0.0  0.0  49496   180 ?        Ss   Mar09   0:00 /usr/lib/systemd/systemd-udevd
+root       417  0.0  0.0      0     0 ?        S<   Mar09   0:00 [kworker/0:1H]
+root       538  0.0  0.0      0     0 ?        S    Mar09   0:02 [jbd2/sdb1-8]
+root       539  0.0  0.0      0     0 ?        S<   Mar09   0:00 [ext4-rsv-conver]
+root       541  0.0  0.0      0     0 ?        S    Mar09   0:00 [jbd2/sdd1-8]
+root       542  0.0  0.0      0     0 ?        S<   Mar09   0:00 [ext4-rsv-conver]
+root       548  0.0  0.0      0     0 ?        S    Mar09   0:00 [jbd2/sda1-8]
+root       549  0.0  0.0      0     0 ?        S<   Mar09   0:00 [ext4-rsv-conver]
+root       557  0.0  0.0      0     0 ?        S    Mar09   0:00 [jbd2/sdf1-8]
+root       558  0.0  0.0      0     0 ?        S<   Mar09   0:00 [ext4-rsv-conver]
+root       587  0.0  0.0   8696     0 ?        Ss   Mar09   0:00 /opt/CrowdStrike/falcond
+root       588  0.2  0.7 1369448 14672 ?       Sl   Mar09   4:08 falcon-sensor
+root       599  0.0  0.0  55532   336 ?        S<sl Mar09   0:05 /sbin/auditd
+libstor+   624  0.0  0.0   8580    72 ?        Ss   Mar09   0:00 /usr/bin/lsmd -d
+polkitd    625  0.0  0.0 616424   852 ?        Ssl  Mar09   0:09 /usr/lib/polkit-1/polkitd --no-debug
+root       627  0.0  0.0 228548  1600 ?        Ss   Mar09   0:01 /usr/sbin/abrtd -d -s
+root       628  0.0  0.0 225900   156 ?        Ss   Mar09   0:01 /usr/bin/abrt-watch-log -F BUG: WARNING: at WARNING: CPU: INFO: possible recursive locking detected ernel BUG at list_del co
+root       629  0.0  0.0  90672   196 ?        Ss   Mar09   0:06 /sbin/rngd -f
+dbus       636  0.0  0.0  70824  1352 ?        Ssl  Mar09   0:44 /usr/bin/dbus-daemon --system --address=systemd: --nofork --nopidfile --systemd-activation
+chrony     638  0.0  0.0 117808   556 ?        S    Mar09   0:00 /usr/sbin/chronyd
+rpc        639  0.0  0.0  69256    68 ?        Ss   Mar09   0:00 /sbin/rpcbind -w
+root       646  0.1  0.0 474616  1260 ?        Ssl  Mar09   2:06 /usr/sbin/NetworkManager --no-daemon
+root       647  0.0  0.0  24472  1096 ?        Ss   Mar09   0:32 /usr/lib/systemd/systemd-logind
+root       649  0.0  0.0  52880   332 ?        Ss   Mar09   0:00 /usr/sbin/smartd -n -q never
+root       651  0.0  0.0  21684   468 ?        Ss   Mar09   0:05 /usr/sbin/irqbalance --foreground
+root       652  0.0  0.0 166240     4 ?        Ss   Mar09   0:00 /usr/bin/VGAuthService -s
+root       653  0.1  0.1 340580  1984 ?        Ssl  Mar09   1:57 /usr/bin/vmtoolsd
+nscd       660  0.0  0.0 1006476 1616 ?        Ssl  Mar09   0:28 /usr/sbin/nscd
+root       662  0.0  0.0  25908    80 ?        Ss   Mar09   0:00 /usr/sbin/atd -f
+root       665  0.0  0.0 124476   416 ?        Ss   Mar09   0:05 /usr/sbin/crond -n -m off
+root       691  0.0  0.0 108296    80 tty1     Ss+  Mar09   0:00 /sbin/agetty --noclear tty1 linux
+root       806  0.0  0.0      0     0 ?        S    Mar09   0:00 [kcs-errman]
+root       809  0.0  0.0      0     0 ?        S    Mar09   0:40 [kcs-evdefer/0]
+root       810  0.0  0.0      0     0 ?        S    Mar09   0:40 [kcs-evdefer/1]
+root       811  0.0  0.0      0     0 ?        S    Mar09   0:40 [kcs-evdefer/2]
+root       812  0.0  0.0      0     0 ?        S    Mar09   0:41 [kcs-evdefer/3]
+root       813  0.0  0.0      0     0 ?        S    Mar09   0:00 [kcs-evreap]
+root       814  0.0  0.0      0     0 ?        S    Mar09   0:00 [kcs-evnet]
+root       818  0.0  0.0      0     0 ?        S    Mar09   0:26 [kcs-term]
+root       820  0.0  0.0      0     0 ?        S    Mar09   1:18 [kcs-created]
+root       821  0.0  0.0      0     0 ?        S    Mar09   0:00 [kcs-wqtimer]
+root       822  0.0  0.0      0     0 ?        S    Mar09   0:14 [kcs-cormgr]
+root       823  0.0  0.0      0     0 ?        S    Mar09   0:00 [kcs-telem]
+root       825  0.0  0.0      0     0 ?        S    Mar09   1:11 [kcs-file/0]
+root       826  0.0  0.0      0     0 ?        S    Mar09   1:11 [kcs-file/1]
+root       827  0.0  0.0      0     0 ?        S    Mar09   0:00 [kcs-ooa/0]
+root       828  0.0  0.0      0     0 ?        S    Mar09   0:00 [kcs-ooa/1]
+root       829  0.0  0.0      0     0 ?        S    Mar09   0:00 [kcs-ooadef/0]
+root       830  0.0  0.0      0     0 ?        S    Mar09   0:00 [kcs-ooadef/1]
+postfix    910  0.0  0.2  89136  4036 ?        S    12:46   0:00 pickup -l -t unix -u
+root       963  0.0  0.0 111572   428 ?        Ss   Mar09   0:06 /usr/sbin/sshd -D
+root       964  0.0  0.5 645360 10640 ?        Ss   Mar09   0:09 /usr/sbin/httpd -DFOREGROUND
+root       966  0.0  0.0  52708    64 ?        Ss   Mar09   0:00 /usr/sbin/oddjobd -n -p /var/run/oddjobd.pid -t 300
+root       970  0.0  0.0 582052   960 ?        Ssl  Mar09   0:09 /usr/bin/python2 -Es /usr/sbin/tuned -l -P
+root       971  0.0  0.3 273744  6720 ?        Ssl  Mar09   0:10 /usr/sbin/rsyslogd -n
+root       976  0.2  0.7 688220 14120 ?        Ssl  Mar09   3:52 /usr/bin/python2 -s /usr/bin/fail2ban-server -xf start
+zabbix     986  0.0  0.0  85040   108 ?        S    Mar09   0:00 /usr/sbin/zabbix_agentd -c /etc/zabbix/zabbix_agentd.conf
+zabbix     997  0.0  0.0  85040   572 ?        S    Mar09   0:26 /usr/sbin/zabbix_agentd: collector [idle 1 sec]
+zabbix     998  0.0  0.0  85040    92 ?        S    Mar09   0:00 /usr/sbin/zabbix_agentd: listener #1 [waiting for connection]
+zabbix     999  0.0  0.0  85040    92 ?        S    Mar09   0:00 /usr/sbin/zabbix_agentd: listener #2 [waiting for connection]
+zabbix    1000  0.0  0.0  85040    92 ?        S    Mar09   0:00 /usr/sbin/zabbix_agentd: listener #3 [waiting for connection]
+zabbix    1001  0.0  0.0  85040   524 ?        S    Mar09   0:08 /usr/sbin/zabbix_agentd: active checks #1 [idle 1 sec]
+root      1012  0.0  0.0 108072   404 ?        Ss   Mar09   0:00 rhnsd
+root      1059  0.0  0.0      0     0 ?        S    Mar09   0:00 [kcs-rundown]
+root      1326  0.0  0.0  89244   276 ?        Ss   Mar09   0:01 /usr/libexec/postfix/master -w
+postfix   1329  0.0  0.0  89204   260 ?        S    Mar09   0:00 qmgr -l -t unix -u
+mysql     1384  0.0  1.8 1770240 35200 ?       Ssl  Mar09   1:02 /usr/sbin/mysqld
+root      2614  0.0  0.3 159896  5732 ?        Ss   12:56   0:00 sshd: zainabmustapha [priv]
+zainabm+  2738  0.0  0.1 159896  2448 ?        S    12:57   0:00 sshd: zainabmustapha@pts/11
+zainabm+  2739  0.0  0.1 114864  3188 pts/11   Ss   12:57   0:00 -bash
+zainabm+  2816  0.0  0.1 115444  1948 pts/11   S+   12:57   0:00 nano lab4.c
+root      2945  0.0  0.0      0     0 ?        S    12:58   0:00 [kworker/0:2]
+root      3342  0.0  0.3 159896  5688 ?        Ss   13:00   0:00 sshd: vishalsingh [priv]
+root      3416  0.0  0.0      0     0 ?        S    13:01   0:00 [kworker/1:3]
+vishals+  3441  0.0  0.1 159896  2456 ?        S    13:01   0:00 sshd: vishalsingh@pts/7
+vishals+  3481  0.0  0.1 114864  3232 pts/7    Ss   13:01   0:00 -bash
+akashba+  3543  0.0  0.1 116652  3160 pts/9    S+   13:01   0:00 nano lab4.c
+root      3898  0.0  0.0      0     0 ?        S    13:03   0:00 [kworker/u4:0]
+root      4143  0.0  0.0      0     0 ?        R    13:05   0:00 [kworker/0:1]
+anshulb+  4257  0.0  0.2 117432  4036 pts/3    S+   13:05   0:00 nano Lab4prog.c
+root      4292  0.0  0.0      0     0 ?        S    13:06   0:00 [kworker/1:0]
+root      4376  0.0  0.3 159896  5680 ?        Ss   13:06   0:00 sshd: safiyaedwards [priv]
+safiyae+  4387  0.0  0.1 159896  2292 ?        S    13:06   0:00 sshd: safiyaedwards@pts/12
+safiyae+  4388  0.0  0.1 114728  3116 pts/12   Ss+  13:06   0:00 -bash
+root      4785  0.0  0.0      0     0 ?        S    13:08   0:00 [kworker/u4:2]
+root      4973  0.0  0.3 159896  5664 ?        Ss   13:09   0:00 sshd: lukanikolaisvili [priv]
+lukanik+  4985  0.0  0.1 159896  2432 ?        S    13:09   0:00 sshd: lukanikolaisvili@pts/14
+lukanik+  4986  0.0  0.1 114864  3216 pts/14   Ss+  13:09   0:00 -bash
+kobiejoh  5217  0.0  0.0   4224   540 pts/8    T    13:10   0:00 ./lab4shell
+root      5267  0.0  0.3 159900  5832 ?        Ss   13:10   0:00 sshd: achemmala [priv]
+achemma+  5275  0.0  0.1 159900  2452 ?        S    13:10   0:00 sshd: achemmala@notty
+achemma+  5276  0.0  0.1  70788  2740 ?        Ss   13:10   0:00 /usr/libexec/openssh/sftp-server
+root      5432  0.0  0.3 159896  5668 ?        Ss   13:11   0:00 sshd: divyshah [priv]
+divyshah  5498  0.0  0.1 159896  2436 ?        S    13:11   0:00 sshd: divyshah@pts/2
+divyshah  5499  0.0  0.1 114864  3188 pts/2    Ss+  13:11   0:00 -bash
+apache    5646  0.0  0.7 646880 15040 ?        S    03:49   0:02 /usr/sbin/httpd -DFOREGROUND
+apache    5647  0.0  2.3 733560 43356 ?        S    03:49   0:02 /usr/sbin/httpd -DFOREGROUND
+root      5910  0.0  0.0      0     0 ?        S    13:13   0:00 [kworker/u4:1]
+kobiejoh  5923  0.0  0.2 117948  4740 pts/8    S+   13:13   0:00 nano lab4shell.c
+apache    6045  0.0  0.7 646872 13748 ?        S    03:52   0:02 /usr/sbin/httpd -DFOREGROUND
+vishals+  6050  0.0  0.0 112384   768 pts/7    S+   13:14   0:00 script VishalSingh_lab4_logfile.txt
+vishals+  6052  0.0  0.0 112388   380 pts/7    S+   13:14   0:00 script VishalSingh_lab4_logfile.txt
+vishals+  6053  0.0  0.1 114816  3232 pts/13   Ss   13:14   0:00 bash -i
+root      6072  0.0  0.3 350548  6704 ?        Sl   13:14   0:00 /usr/sbin/abrt-dbus -t133
+root      6121  0.0  0.2 111572  4292 ?        Ss   13:14   0:00 sshd: [accepted]
+sshd      6122  0.0  0.1 111572  2204 ?        S    13:14   0:00 sshd: [net]
+root      6233  0.0  0.0      0     0 ?        S    13:15   0:00 [kworker/0:0]
+vishals+  6245  0.0  0.0   4224   356 pts/13   S+   13:15   0:00 ./lab4
+root      6270  0.0  0.0      0     0 ?        R    13:15   0:00 [kworker/1:1]
+root      6276  0.0  0.2 163976  5388 ?        Ss   13:15   0:00 sshd: karanmajotra [priv]
+sshd      6277  0.0  0.1 111572  2456 ?        S    13:15   0:00 sshd: karanmajotra [net]
+vishals+  6408  0.0  0.0 153540  1796 pts/13   R+   13:16   0:00 ps aux
+apache    7376  0.0  0.8 646708 16556 ?        S    10:15   0:00 /usr/sbin/httpd -DFOREGROUND
+root      8103  0.0  0.0      0     0 ?        S    Mar09   0:00 [kcs-workqueue]
+root      8104  0.0  0.0      0     0 ?        S    Mar09   0:00 [kcs-workqueue]
+root      8478  0.0  0.0 159896    68 ?        Ss   Mar09   0:00 sshd: jacques [priv]
+jacques   8487  0.0  0.0 159896   252 ?        S    Mar09   0:00 sshd: jacques@pts/0
+jacques   8488  0.0  0.0 114860   204 pts/0    Ss   Mar09   0:00 -bash
+root      8566  0.0  0.0 250612   184 pts/0    S    Mar09   0:00 sudo bash
+root      8568  0.0  0.1 114952  2172 pts/0    S+   Mar09   0:00 bash
+root     15432  0.0  0.0      0     0 ?        S    Mar09   0:00 [kcs-workqueue]
+apache   17023  0.0  0.8 646868 15732 ?        S    04:54   0:02 /usr/sbin/httpd -DFOREGROUND
+apache   17025  0.0  3.7 739552 70024 ?        S    04:54   0:03 /usr/sbin/httpd -DFOREGROUND
+root     18676  0.0  0.2 159896  5616 ?        Ss   11:23   0:00 sshd: dylanbrosseau [priv]
+dylanbr+ 18689  0.0  0.1 159896  2444 ?        S    11:23   0:00 sshd: dylanbrosseau@notty
+dylanbr+ 18690  0.0  0.1  70652  2764 ?        Ss   11:23   0:00 /usr/libexec/openssh/sftp-server
+apache   18840  0.0  0.8 646844 16288 ?        S    08:11   0:01 /usr/sbin/httpd -DFOREGROUND
+apache   18967  0.0  0.8 646916 15360 ?        S    08:12   0:01 /usr/sbin/httpd -DFOREGROUND
+root     19062  0.0  0.2 159896  5620 ?        Ss   11:25   0:00 sshd: dylanbrosseau [priv]
+dylanbr+ 19070  0.0  0.1 159896  2448 ?        S    11:25   0:00 sshd: dylanbrosseau@notty
+dylanbr+ 19071  0.0  0.1  70652  2756 ?        Ss   11:25   0:00 /usr/libexec/openssh/sftp-server
+root     20528  0.0  0.3 164100  5820 ?        Ss   11:34   0:00 sshd: divyshah [priv]
+divyshah 20694  0.0  0.1 164100  2448 ?        S    11:35   0:00 sshd: divyshah@pts/4
+divyshah 20712  0.0  0.1 114864  3192 pts/4    Ss   11:35   0:00 -bash
+divyshah 22286  0.0  0.1 115444  2160 pts/4    S+   11:44   0:00 nano lab4.c
+root     23444  0.0  0.2 159896  5632 ?        Ss   11:51   0:00 sshd: igorjardimmartins [priv]
+igorjar+ 23457  0.0  0.1 159896  2300 ?        S    11:51   0:00 sshd: igorjardimmartins
+root     23670  0.0  0.2 159896  5628 ?        Ss   11:52   0:00 sshd: igorjardimmartins [priv]
+igorjar+ 23681  0.0  0.1 159896  2440 ?        S    11:52   0:00 sshd: igorjardimmartins@pts/6
+igorjar+ 23682  0.0  0.1 114976  3488 pts/6    Ss+  11:52   0:00 -bash
+root     24209  0.0  0.3 159896  5792 ?        Ss   11:55   0:00 sshd: igorjardimmartins [priv]
+igorjar+ 24217  0.0  0.1 159896  2464 ?        S    11:55   0:00 sshd: igorjardimmartins@notty
+igorjar+ 24218  0.0  0.1  70652  2748 ?        Ss   11:55   0:00 /usr/libexec/openssh/sftp-server
+apache   24436  0.0  0.8 646868 16168 ?        S    08:43   0:01 /usr/sbin/httpd -DFOREGROUND
+root     24942  0.0  0.0      0     0 ?        S    Mar09   0:00 [kcs-workqueue]
+root     25173  0.0  0.3 159896  5736 ?        Ss   12:00   0:00 sshd: kobiejoh [priv]
+kobiejoh 25195  0.0  0.1 159896  2428 ?        S    12:00   0:00 sshd: kobiejoh@pts/8
+kobiejoh 25196  0.0  0.1 114732  3172 pts/8    Ss   12:00   0:00 -bash
+root     25765  0.0  0.3 164096  5968 ?        Ss   12:03   0:00 sshd: anshulbassi [priv]
+kobiejoh 25897  0.0  0.0   4224   544 pts/8    T    12:04   0:00 ./lab4shell
+anshulb+ 25937  0.0  0.1 164096  2588 ?        S    12:04   0:00 sshd: anshulbassi@pts/3
+anshulb+ 25961  0.0  0.1 114960  3476 pts/3    Ss   12:04   0:00 -bash
+root     26647  0.0  0.3 159896  5744 ?        Ss   12:07   0:00 sshd: akashbahl [priv]
+akashba+ 26664  0.0  0.1 159896  2452 ?        S    12:07   0:00 sshd: akashbahl@pts/9
+akashba+ 26665  0.0  0.1 114964  3460 pts/9    Ss   12:07   0:00 -bash
+apache   27302  0.0  0.8 646708 16056 ?        S    12:10   0:00 /usr/sbin/httpd -DFOREGROUND
+root     27761  0.0  0.3 159896  5756 ?        Ss   12:13   0:00 sshd: anshulbassi [priv]
+anshulb+ 27769  0.0  0.1 159896  2440 ?        S    12:13   0:00 sshd: anshulbassi@pts/10
+anshulb+ 27770  0.0  0.1 114864  3216 pts/10   Ss   12:13   0:00 -bash
+anshulb+ 28173  0.0  0.2 118260  4884 pts/10   S+   12:15   0:00 nano Lab4program.c
+root     29007  0.0  0.3 159896  5772 ?        Ss   12:19   0:00 sshd: igorjardimmartins [priv]
+igorjar+ 29125  0.0  0.1 159896  2300 ?        S    12:20   0:00 sshd: igorjardimmartins
+root     29126  0.0  0.3 159896  5748 ?        Ss   12:20   0:00 sshd: igorjardimmartins [priv]
+igorjar+ 29139  0.0  0.1 159896  2448 ?        S    12:20   0:00 sshd: igorjardimmartins@notty
+igorjar+ 29140  0.0  0.1  70652  2784 ?        Ss   12:20   0:00 /usr/libexec/openssh/sftp-server
+root     29645  0.0  0.3 159896  5744 ?        Ss   12:23   0:00 sshd: dylanbrosseau [priv]
+dylanbr+ 29763  0.0  0.1 159896  2452 ?        S    12:24   0:00 sshd: dylanbrosseau@pts/1
+dylanbr+ 29764  0.0  0.1 114732  3196 pts/1    Ss+  12:24   0:00 -bash
+root     31347  0.0  0.3 159896  5756 ?        Ss   12:34   0:00 sshd: emmanuelekpo [priv]
+emmanue+ 31356  0.0  0.1 159896  2432 ?        S    12:34   0:00 sshd: emmanuelekpo@pts/5
+emmanue+ 31357  0.0  0.1 114972  3448 pts/5    Ss+  12:34   0:00 -bash
+Verb >> help
+ -------------------------------------HELP-----------------------------------------
+ Valid verbs are:
+ help:                  Displays this text
+ systeminfo:            Displays the System information.
+ diskuse:               Shows the amount of disk being used in the current directory.
+ drives:                Lists all of the ext4 mounted partitions as well as their size and free space.
+ processinfo:           Displays information about All the running processes.
+ findprocess [process]: Displays information about the specified process. If not present, searches for 'root'.
+ jobtree [username]:    Shows the processes running related to a specific username.
+ exit:                  Exits this shell and returns to your original shell.
+ NOTE: Elements in square brackets are optional and verbs are Case-Sensitive
+Verb >> findprocess
+Note: No Process provided so using the root as default process
+root         1  0.1  0.2 128424  4392 ?        Ss   Mar09   1:49 /usr/lib/systemd/systemd --switched-root --system --deserialize 22
+root         2  0.0  0.0      0     0 ?        S    Mar09   0:00 [kthreadd]
+root         4  0.0  0.0      0     0 ?        S<   Mar09   0:00 [kworker/0:0H]
+root         6  1.9  0.0      0     0 ?        S    Mar09  33:48 [ksoftirqd/0]
+root         7  0.0  0.0      0     0 ?        S    Mar09   0:02 [migration/0]
+root         8  0.0  0.0      0     0 ?        S    Mar09   0:00 [rcu_bh]
+root         9  0.1  0.0      0     0 ?        S    Mar09   1:55 [rcu_sched]
+root        10  0.0  0.0      0     0 ?        S<   Mar09   0:00 [lru-add-drain]
+root        11  0.0  0.0      0     0 ?        S    Mar09   0:05 [watchdog/0]
+root        12  0.0  0.0      0     0 ?        S    Mar09   0:01 [watchdog/1]
+root        13  0.0  0.0      0     0 ?        S    Mar09   0:00 [migration/1]
+root        14  2.1  0.0      0     0 ?        S    Mar09  37:18 [ksoftirqd/1]
+root        16  0.0  0.0      0     0 ?        S<   Mar09   0:00 [kworker/1:0H]
+root        18  0.0  0.0      0     0 ?        S    Mar09   0:00 [kdevtmpfs]
+root        19  0.0  0.0      0     0 ?        S<   Mar09   0:00 [netns]
+root        20  0.0  0.0      0     0 ?        S    Mar09   0:00 [khungtaskd]
+root        21  0.0  0.0      0     0 ?        S<   Mar09   0:00 [writeback]
+root        22  0.0  0.0      0     0 ?        S<   Mar09   0:00 [kintegrityd]
+root        23  0.0  0.0      0     0 ?        S<   Mar09   0:00 [bioset]
+root        24  0.0  0.0      0     0 ?        S<   Mar09   0:00 [bioset]
+root        25  0.0  0.0      0     0 ?        S<   Mar09   0:00 [bioset]
+root        26  0.0  0.0      0     0 ?        S<   Mar09   0:00 [kblockd]
+root        27  0.0  0.0      0     0 ?        S<   Mar09   0:00 [md]
+root        28  0.0  0.0      0     0 ?        S<   Mar09   0:00 [edac-poller]
+root        29  0.0  0.0      0     0 ?        S<   Mar09   0:00 [watchdogd]
+root        35  0.0  0.0      0     0 ?        S    Mar09   0:01 [kswapd0]
+root        36  0.0  0.0      0     0 ?        SN   Mar09   0:00 [ksmd]
+root        37  0.0  0.0      0     0 ?        SN   Mar09   0:00 [khugepaged]
+root        38  0.0  0.0      0     0 ?        S<   Mar09   0:00 [crypto]
+root        46  0.0  0.0      0     0 ?        S<   Mar09   0:00 [kthrotld]
+root        48  0.0  0.0      0     0 ?        S<   Mar09   0:00 [kmpath_rdacd]
+root        49  0.0  0.0      0     0 ?        S<   Mar09   0:00 [kaluad]
+root        51  0.0  0.0      0     0 ?        S<   Mar09   0:00 [kpsmoused]
+root        52  0.0  0.0      0     0 ?        S<   Mar09   0:00 [ipv6_addrconf]
+root        66  0.0  0.0      0     0 ?        S<   Mar09   0:00 [deferwq]
+root       101  0.0  0.0      0     0 ?        S    Mar09   0:00 [kauditd]
+root       242  0.0  0.0      0     0 ?        S    Mar09   0:00 [scsi_eh_0]
+root       243  0.0  0.0      0     0 ?        S<   Mar09   0:00 [scsi_tmf_0]
+root       244  0.0  0.0      0     0 ?        S<   Mar09   0:00 [vmw_pvscsi_wq_0]
+root       246  0.0  0.0      0     0 ?        S<   Mar09   0:00 [ata_sff]
+root       248  0.0  0.0      0     0 ?        S<   Mar09   0:00 [nfit]
+root       250  0.0  0.0      0     0 ?        S    Mar09   0:00 [scsi_eh_1]
+root       261  0.0  0.0      0     0 ?        S<   Mar09   0:00 [scsi_tmf_1]
+root       268  0.0  0.0      0     0 ?        S    Mar09   0:00 [scsi_eh_2]
+root       272  0.0  0.0      0     0 ?        S<   Mar09   0:00 [scsi_tmf_2]
+root       283  0.0  0.0      0     0 ?        S    Mar09   0:00 [irq/16-vmwgfx]
+root       284  0.0  0.0      0     0 ?        S<   Mar09   0:00 [ttm_swap]
+root       293  0.0  0.0      0     0 ?        S<   Mar09   0:00 [kworker/1:1H]
+root       301  0.0  0.0      0     0 ?        S    Mar09   0:00 [jbd2/sda3-8]
+root       302  0.0  0.0      0     0 ?        S<   Mar09   0:00 [ext4-rsv-conver]
+root       380  0.0  0.2  39164  4596 ?        Ss   Mar09   0:37 /usr/lib/systemd/systemd-journald
+root       403  0.0  0.0 119180     0 ?        Ss   Mar09   0:00 /usr/sbin/lvmetad -f
+root       416  0.0  0.0  49496   180 ?        Ss   Mar09   0:00 /usr/lib/systemd/systemd-udevd
+root       417  0.0  0.0      0     0 ?        S<   Mar09   0:00 [kworker/0:1H]
+root       538  0.0  0.0      0     0 ?        S    Mar09   0:02 [jbd2/sdb1-8]
+root       539  0.0  0.0      0     0 ?        S<   Mar09   0:00 [ext4-rsv-conver]
+root       541  0.0  0.0      0     0 ?        S    Mar09   0:00 [jbd2/sdd1-8]
+root       542  0.0  0.0      0     0 ?        S<   Mar09   0:00 [ext4-rsv-conver]
+root       548  0.0  0.0      0     0 ?        S    Mar09   0:00 [jbd2/sda1-8]
+root       549  0.0  0.0      0     0 ?        S<   Mar09   0:00 [ext4-rsv-conver]
+root       557  0.0  0.0      0     0 ?        S    Mar09   0:00 [jbd2/sdf1-8]
+root       558  0.0  0.0      0     0 ?        S<   Mar09   0:00 [ext4-rsv-conver]
+root       587  0.0  0.0   8696     0 ?        Ss   Mar09   0:00 /opt/CrowdStrike/falcond
+root       588  0.2  0.7 1369448 14672 ?       Sl   Mar09   4:08 falcon-sensor
+root       599  0.0  0.0  55532   336 ?        S<sl Mar09   0:05 /sbin/auditd
+root       627  0.0  0.0 228548  1600 ?        Ss   Mar09   0:01 /usr/sbin/abrtd -d -s
+root       628  0.0  0.0 225900   156 ?        Ss   Mar09   0:01 /usr/bin/abrt-watch-log -F BUG: WARNING: at WARNING: CPU: INFO: possible recursive locking detected ernel BUG at list_del corruption list_add corruption do_IRQ: stack overflow: ear stack overflow (cur: eneral protection fault nable to handle kernel ouble fault: RTNL: assertion failed eek! page_mapcount(page) went negative! adness at NETDEV WATCHDOG ysctl table check failed : nobody cared IRQ handler type mismatch Kernel panic - not syncing: Machine Check Exception: Machine check events logged divide error: bounds: coprocessor segment overrun: invalid TSS: segment not present: invalid opcode: alignment check: stack segment: fpu exception: simd exception: iret exception: /var/log/messages -- /usr/bin/abrt-dump-oops -xtD
+root       629  0.0  0.0  90672   196 ?        Ss   Mar09   0:06 /sbin/rngd -f
+root       646  0.1  0.0 474616  1260 ?        Ssl  Mar09   2:06 /usr/sbin/NetworkManager --no-daemon
+root       647  0.0  0.0  24472  1096 ?        Ss   Mar09   0:32 /usr/lib/systemd/systemd-logind
+root       649  0.0  0.0  52880   332 ?        Ss   Mar09   0:00 /usr/sbin/smartd -n -q never
+root       651  0.0  0.0  21684   468 ?        Ss   Mar09   0:05 /usr/sbin/irqbalance --foreground
+root       652  0.0  0.0 166240     4 ?        Ss   Mar09   0:00 /usr/bin/VGAuthService -s
+root       653  0.1  0.1 340580  1984 ?        Ssl  Mar09   1:57 /usr/bin/vmtoolsd
+root       662  0.0  0.0  25908    80 ?        Ss   Mar09   0:00 /usr/sbin/atd -f
+root       665  0.0  0.0 124476   416 ?        Ss   Mar09   0:05 /usr/sbin/crond -n -m off
+root       691  0.0  0.0 108296    80 tty1     Ss+  Mar09   0:00 /sbin/agetty --noclear tty1 linux
+root       806  0.0  0.0      0     0 ?        S    Mar09   0:00 [kcs-errman]
+root       809  0.0  0.0      0     0 ?        S    Mar09   0:40 [kcs-evdefer/0]
+root       810  0.0  0.0      0     0 ?        S    Mar09   0:40 [kcs-evdefer/1]
+root       811  0.0  0.0      0     0 ?        S    Mar09   0:40 [kcs-evdefer/2]
+root       812  0.0  0.0      0     0 ?        S    Mar09   0:41 [kcs-evdefer/3]
+root       813  0.0  0.0      0     0 ?        S    Mar09   0:00 [kcs-evreap]
+root       814  0.0  0.0      0     0 ?        S    Mar09   0:00 [kcs-evnet]
+root       818  0.0  0.0      0     0 ?        S    Mar09   0:26 [kcs-term]
+root       820  0.0  0.0      0     0 ?        S    Mar09   1:18 [kcs-created]
+root       821  0.0  0.0      0     0 ?        S    Mar09   0:00 [kcs-wqtimer]
+root       822  0.0  0.0      0     0 ?        S    Mar09   0:14 [kcs-cormgr]
+root       823  0.0  0.0      0     0 ?        S    Mar09   0:00 [kcs-telem]
+root       825  0.0  0.0      0     0 ?        S    Mar09   1:11 [kcs-file/0]
+root       826  0.0  0.0      0     0 ?        S    Mar09   1:11 [kcs-file/1]
+root       827  0.0  0.0      0     0 ?        S    Mar09   0:00 [kcs-ooa/0]
+root       828  0.0  0.0      0     0 ?        S    Mar09   0:00 [kcs-ooa/1]
+root       829  0.0  0.0      0     0 ?        S    Mar09   0:00 [kcs-ooadef/0]
+root       830  0.0  0.0      0     0 ?        S    Mar09   0:00 [kcs-ooadef/1]
+root       963  0.0  0.0 111572   428 ?        Ss   Mar09   0:06 /usr/sbin/sshd -D
+root       964  0.0  0.5 645360 10640 ?        Ss   Mar09   0:09 /usr/sbin/httpd -DFOREGROUND
+root       966  0.0  0.0  52708    64 ?        Ss   Mar09   0:00 /usr/sbin/oddjobd -n -p /var/run/oddjobd.pid -t 300
+root       970  0.0  0.0 582052   960 ?        Ssl  Mar09   0:09 /usr/bin/python2 -Es /usr/sbin/tuned -l -P
+root       971  0.0  0.3 273744  6724 ?        Ssl  Mar09   0:10 /usr/sbin/rsyslogd -n
+root       976  0.2  0.7 688220 14120 ?        Ssl  Mar09   3:52 /usr/bin/python2 -s /usr/bin/fail2ban-server -xf start
+root      1012  0.0  0.0 108072   404 ?        Ss   Mar09   0:00 rhnsd
+root      1059  0.0  0.0      0     0 ?        S    Mar09   0:00 [kcs-rundown]
+root      1326  0.0  0.0  89244   276 ?        Ss   Mar09   0:01 /usr/libexec/postfix/master -w
+root      2614  0.0  0.3 159896  5732 ?        Ss   12:56   0:00 sshd: zainabmustapha [priv]
+root      2945  0.0  0.0      0     0 ?        S    12:58   0:00 [kworker/0:2]
+root      3342  0.0  0.3 159896  5688 ?        Ss   13:00   0:00 sshd: vishalsingh [priv]
+root      3416  0.0  0.0      0     0 ?        S    13:01   0:00 [kworker/1:3]
+root      3898  0.0  0.0      0     0 ?        S    13:03   0:00 [kworker/u4:0]
+root      4143  0.0  0.0      0     0 ?        S    13:05   0:00 [kworker/0:1]
+root      4292  0.0  0.0      0     0 ?        S    13:06   0:00 [kworker/1:0]
+root      4376  0.0  0.3 159896  5680 ?        Ss   13:06   0:00 sshd: safiyaedwards [priv]
+root      4785  0.0  0.0      0     0 ?        S    13:08   0:00 [kworker/u4:2]
+root      4973  0.0  0.3 159896  5664 ?        Ss   13:09   0:00 sshd: lukanikolaisvili [priv]
+root      5267  0.0  0.3 159900  5832 ?        Ss   13:10   0:00 sshd: achemmala [priv]
+root      5432  0.0  0.3 159896  5668 ?        Ss   13:11   0:00 sshd: divyshah [priv]
+root      5910  0.0  0.0      0     0 ?        S    13:13   0:00 [kworker/u4:1]
+root      6121  0.0  0.2 111572  4292 ?        Ss   13:14   0:00 sshd: [accepted]
+root      6233  0.0  0.0      0     0 ?        S    13:15   0:00 [kworker/0:0]
+root      6270  0.0  0.0      0     0 ?        S    13:15   0:00 [kworker/1:1]
+root      6276  0.3  0.2 164100  5508 ?        Ss   13:15   0:00 sshd: karanmajotra [priv]
+root      6417  0.0  0.2 111572  4296 ?        Ss   13:16   0:00 sshd: [accepted]
+vishals+  6440  0.0  0.0 113284  1212 pts/13   S+   13:16   0:00 /bin/bash -c ps aux | grep root
+vishals+  6442  0.0  0.0 112816   960 pts/13   S+   13:16   0:00 grep root
+root      8103  0.0  0.0      0     0 ?        S    Mar09   0:00 [kcs-workqueue]
+root      8104  0.0  0.0      0     0 ?        S    Mar09   0:00 [kcs-workqueue]
+root      8478  0.0  0.0 159896    68 ?        Ss   Mar09   0:00 sshd: jacques [priv]
+root      8566  0.0  0.0 250612   184 pts/0    S    Mar09   0:00 sudo bash
+root      8568  0.0  0.1 114952  2172 pts/0    S+   Mar09   0:00 bash
+root     15432  0.0  0.0      0     0 ?        S    Mar09   0:00 [kcs-workqueue]
+root     18676  0.0  0.2 159896  5616 ?        Ss   11:23   0:00 sshd: dylanbrosseau [priv]
+root     19062  0.0  0.2 159896  5620 ?        Ss   11:25   0:00 sshd: dylanbrosseau [priv]
+root     20528  0.0  0.3 164100  5820 ?        Ss   11:34   0:00 sshd: divyshah [priv]
+root     23444  0.0  0.2 159896  5632 ?        Ss   11:51   0:00 sshd: igorjardimmartins [priv]
+root     23670  0.0  0.2 159896  5628 ?        Ss   11:52   0:00 sshd: igorjardimmartins [priv]
+root     24209  0.0  0.3 159896  5792 ?        Ss   11:55   0:00 sshd: igorjardimmartins [priv]
+root     24942  0.0  0.0      0     0 ?        S    Mar09   0:00 [kcs-workqueue]
+root     25173  0.0  0.3 159896  5736 ?        Ss   12:00   0:00 sshd: kobiejoh [priv]
+root     25765  0.0  0.3 164096  5968 ?        Ss   12:03   0:00 sshd: anshulbassi [priv]
+root     26647  0.0  0.3 159896  5744 ?        Ss   12:07   0:00 sshd: akashbahl [priv]
+root     27761  0.0  0.3 159896  5756 ?        Ss   12:13   0:00 sshd: anshulbassi [priv]
+root     29007  0.0  0.3 159896  5772 ?        Ss   12:19   0:00 sshd: igorjardimmartins [priv]
+root     29126  0.0  0.3 159896  5748 ?        Ss   12:20   0:00 sshd: igorjardimmartins [priv]
+root     29645  0.0  0.3 159896  5744 ?        Ss   12:23   0:00 sshd: dylanbrosseau [priv]
+root     31347  0.0  0.3 159896  5756 ?        Ss   12:34   0:00 sshd: emmanuelekpo [priv]
+Verb >> findprocess mysql
+mysql     1384  0.0  1.8 1770240 35200 ?       Ssl  Mar09   1:02 /usr/sbin/mysqld
+vishals+  6465  0.0  0.0 113284  1212 pts/13   S+   13:16   0:00 /bin/bash -c ps aux | grep mysql
+vishals+  6467  0.0  0.0 112816   960 pts/13   S+   13:16   0:00 grep mysql
+Verb >> findprocess apache
+apache    5646  0.0  0.8 646880 15560 ?        S    03:49   0:02 /usr/sbin/httpd -DFOREGROUND
+apache    5647  0.0  2.3 733560 43356 ?        S    03:49   0:02 /usr/sbin/httpd -DFOREGROUND
+apache    6045  0.0  0.7 646872 13748 ?        S    03:52   0:02 /usr/sbin/httpd -DFOREGROUND
+vishals+  6804  0.0  0.0 113284  1212 pts/13   S+   13:18   0:00 /bin/bash -c ps aux | grep apache
+vishals+  6806  0.0  0.0 112812   960 pts/13   S+   13:18   0:00 grep apache
+apache    7376  0.0  0.8 646708 16556 ?        S    10:15   0:00 /usr/sbin/httpd -DFOREGROUND
+apache   17023  0.0  0.8 646868 15732 ?        S    04:54   0:02 /usr/sbin/httpd -DFOREGROUND
+apache   17025  0.0  3.7 739552 70024 ?        S    04:54   0:03 /usr/sbin/httpd -DFOREGROUND
+apache   18840  0.0  0.8 646844 16288 ?        S    08:11   0:01 /usr/sbin/httpd -DFOREGROUND
+apache   18967  0.0  0.8 646916 16520 ?        S    08:12   0:01 /usr/sbin/httpd -DFOREGROUND
+apache   24436  0.0  0.8 646868 16184 ?        S    08:43   0:01 /usr/sbin/httpd -DFOREGROUND
+apache   27302  0.0  0.8 646880 16392 ?        S    12:10   0:00 /usr/sbin/httpd -DFOREGROUND
+Verb >> findprocess abc
+vishals+  6818  0.0  0.0 113284  1208 pts/13   S+   13:18   0:00 /bin/bash -c ps aux | grep abc
+vishals+  6820  0.0  0.0 112812   956 pts/13   S+   13:18   0:00 grep abc
+Verb >> jobtreee
+USER                               PID STIME TT       CMD
+vishalsingh                       3441 13:01 ?        sshd: vishalsingh@pts/7
+vishalsingh                       3481 13:01 pts/7     \_ -bash
+vishalsingh                       6050 13:14 pts/7         \_ script VishalSingh_lab4_logfile.txt
+vishalsingh                       6052 13:14 pts/7             \_ script VishalSingh_lab4_logfile.txt
+vishalsingh                       6053 13:14 pts/13                \_ bash -i
+vishalsingh                       6245 13:15 pts/13                    \_ ./lab4
+vishalsingh                       6849 13:18 pts/13                        \_ ps -o user:32,pid,stime,tty,cmd -U vishalsingh --forest
+Verb >> jobtree someone
+error: user name does not exist
+
+Usage:
+ ps [options]
+
+ Try 'ps --help <simple|list|output|threads|misc|all>'
+  or 'ps --help <s|l|o|t|m|a>'
+ for additional help text.
+
+For more details see ps(1).
+
+Verb >> verb
+Invalid verb. Type 'help' for a list of valid verbs.
+Verb >> vishal
+Invalid verb. Type 'help' for a list of valid verbs.
+
+Verb >> exit
+Exiting VI-Shell. Bye, Be back Soon....!
+
+vishalsingh@loki:~/3380/lab4[vishalsingh@loki lab4]$ exit
+exit
+
+Script done on Sun 10 Mar 2024 01:20:16 PM EDT

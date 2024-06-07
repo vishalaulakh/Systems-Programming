@@ -1,0 +1,527 @@
+
+# This is my edited LogFile with Client Side Code added in between the Server Side Code for Clarity
+# I have tried to make it as Simple and understandable as I Could, i will also attach screenshots in another PDF
+
+
+#TASK 1 (SERVER SIDE): SHOWING AND COMPILING THE SERVER CODE
+
+[vishalsingh@loki lab6]$ ls
+client  client.c  server  server.c
+[vishalsingh@loki lab6]$ cat server.c
+#include <stdio.h>
+#include <stdlib.h>
+#include <unistd.h>
+#include <fcntl.h>
+#include <string.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+
+#define FIFO_CLIENT_SERVER "/tmp/client-server_fifo"
+#define FIFO_SERVER_CLIENT "/tmp/server-client_fifo"
+#define BUFFER_SIZE 1024
+
+struct packet {
+    int nbytes;
+    char payload[BUFFER_SIZE];
+};
+
+int main() {
+    printf("Server program STARTED\n");
+
+    // Creating FIFOs ifthey don't exist
+    mkfifo(FIFO_CLIENT_SERVER, 0666);
+    mkfifo(FIFO_SERVER_CLIENT, 0666);
+
+    printf("Communication FIFOs created\n");
+    printf("Waiting for client...\n");
+
+    // Opening the FIFOs
+    int client_to_server_fd = open(FIFO_CLIENT_SERVER, O_RDONLY);
+    int server_to_client_fd = open(FIFO_SERVER_CLIENT, O_WRONLY);
+    if (client_to_server_fd == -1 || server_to_client_fd == -1) {
+        perror("Error opening FIFOs");
+        exit(EXIT_FAILURE);
+    }
+
+    printf("FIFOs opened successfully\n");
+
+    // Receiving filename from client
+    char filename[256];
+    read(client_to_server_fd, filename, sizeof(filename));
+    printf("Received filename from client: %s\n", filename);
+
+    // Opening the file for writing
+    char *new_filename = "lab6_sourcefile_local_clone";
+
+    int file_fd = open(new_filename, O_WRONLY | O_CREAT | O_TRUNC, 0666);
+    if (file_fd == -1) {
+        perror("Error opening file");
+        close(client_to_server_fd);
+        close(server_to_client_fd);
+        exit(EXIT_FAILURE);
+    }
+
+    printf("File opened successfully for writing\n");
+
+    struct packet pkt;
+    int total_bytes_received = 0;
+    while (1) {
+        // Receiving data from client
+        int bytesRead = read(client_to_server_fd, &pkt, sizeof(pkt));
+        if (bytesRead <= 0) {
+            break; //Either the  End of file or error
+        }
+
+        total_bytes_received += pkt.nbytes;
+
+        // Writing the  data to file
+        write(file_fd, pkt.payload, pkt.nbytes);
+        printf("Received %d bytes from client and written to file\n", pkt.nbytes);
+
+        if (pkt.nbytes < BUFFER_SIZE) {
+            break; // End of file
+        }
+    }
+
+    // Sending the  acknowledgment to client
+    strcpy(pkt.payload, "All DONE");
+    write(server_to_client_fd, &pkt, sizeof(pkt));
+    printf("Acknowledgment sent to client\n");
+
+    // Closing all the  file descriptors
+    close(file_fd);
+    close(client_to_server_fd);
+    close(server_to_client_fd);
+
+    printf("Server program finished\n");
+
+    return 0;
+}
+
+[vishalsingh@loki lab6]$ gcc server.c -o server
+
+#TASK 1,1 (CLIENT SIDE): SHOWING AND COMPILING THE CLIENT CODE
+
+[vishalsingh@loki lab6]$ ls
+client  client.c  server  server.c
+[vishalsingh@loki lab6]$ cat client.c
+#include <stdio.h>
+#include <stdlib.h>
+#include <unistd.h>
+#include <fcntl.h>
+#include <string.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+
+#define FIFO_CLIENT_SERVER "/tmp/client-server_fifo" // Defining the FIFO path for client-server communication
+#define FIFO_SERVER_CLIENT "/tmp/server-client_fifo" // Defining the FIFO path for server-client communication
+#define BUFFER_SIZE 1024 // Setting a buffer size based on lab document
+
+struct packet {
+    int nbytes;
+    char payload[BUFFER_SIZE];
+};
+
+int main(int argc, char *argv[]) {
+    if (argc != 2) {
+        fprintf(stderr, "Usage: %s <filename> {Please Provide A File Directory}\n", argv[0]);
+        exit(EXIT_FAILURE);
+    }
+
+    printf("Client program started\n");
+
+    // Checking if the FIFOs exist
+    if (access(FIFO_CLIENT_SERVER, F_OK) == -1 || access(FIFO_SERVER_CLIENT, F_OK) == -1) {
+        fprintf(stderr, "Communication FIFOs not found\n");
+        exit(EXIT_FAILURE);
+    }
+
+    printf("Communication FIFOs found\n");
+
+    // Open FIFOs
+    int client_to_server_fd = open(FIFO_CLIENT_SERVER, O_WRONLY);
+    int server_to_client_fd = open(FIFO_SERVER_CLIENT, O_RDONLY);
+    if (client_to_server_fd == -1 || server_to_client_fd == -1) {
+        perror("Error opening the FIFOs");
+        exit(EXIT_FAILURE);
+    }
+
+    printf("FIFOs opened successfully\n");
+
+    // Sending the filename to the server
+    char *filename = argv[1];
+    write(client_to_server_fd, filename, strlen(filename) + 1);
+    printf("Filename sent to the server: %s\n", filename);
+
+    // Opening the  file to read and send to server
+    int file_fd = open(filename, O_RDONLY);
+    if (file_fd == -1) {
+        perror("Error opening file");
+        close(client_to_server_fd);
+        close(server_to_client_fd);
+        exit(EXIT_FAILURE);
+    }
+
+    printf("File opened successfully\n");
+
+    struct packet pkt;
+    int total_bytes_sent = 0;
+    int nbytes;
+    while ((nbytes = read(file_fd, pkt.payload, BUFFER_SIZE)) > 0) {
+        pkt.nbytes = nbytes;
+        total_bytes_sent += nbytes;
+        write(client_to_server_fd, &pkt, sizeof(pkt));
+        printf("Sent %d bytes to server\n", nbytes);
+    }
+
+    // Sending end of the file message
+    pkt.nbytes = 0;
+    write(client_to_server_fd, &pkt, sizeof(pkt));
+    printf("End of file sent\n");
+
+    // Receiving server acknowledgment
+    read(server_to_client_fd, &pkt, sizeof(pkt));
+    printf("Server response: %s\n", pkt.payload);
+
+    // Closing file descriptors
+    close(file_fd);
+    close(client_to_server_fd);
+    close(server_to_client_fd);
+
+    printf("Client program finished\n");
+
+    return 0;
+}
+
+[vishalsingh@loki lab6]$ gcc client.c -o client
+
+
+#TASK 2 (SERVER SIDE)STARTING THE SERVER AND RECEIVING A FILE (lab4_sourcefile)
+
+
+[vishalsingh@loki lab6]$ ./server
+Server program STARTED
+Communication FIFOs created
+Waiting for client...
+FIFOs opened successfully
+Received filename from client: /home/COIS/3380/lab4_sourcefile
+File opened successfully for writing
+Received 1024 bytes from client and written to file
+Received 897 bytes from client and written to file
+Acknowledgment sent to client
+Server program finished
+
+#TASK 2.2 (CLIENT SIDE)STARTING THE CLIENT AND SENDING A FILE (lab4_sourcefile)
+
+
+[vishalsingh@loki lab6]$ ./client /home/COIS/3380/lab4_sourcefile
+Client program started
+Communication FIFOs found
+FIFOs opened successfully
+Filename sent to the server: /home/COIS/3380/lab4_sourcefile
+File opened successfully
+Sent 1024 bytes to server
+Sent 897 bytes to server
+End of file sent
+Server response: All DONE
+Client program finished
+
+# TASK 2.3 COMPARING THE MD5SUM
+
+
+[vishalsingh@loki lab6]$ ls
+client  client.c  lab6_sourcefile_local_clone  server  server.c
+
+[vishalsingh@loki lab6]$ md5sum /home/COIS/3380/lab4_sourcefile
+9fd8213663918961f962f192c7b4d1f0  /home/COIS/3380/lab4_sourcefile
+
+[vishalsingh@loki lab6]$ md5sum lab6_sourcefile_local_clone
+9fd8213663918961f962f192c7b4d1f0  lab6_sourcefile_local_clone
+
+# TASK 3 SENDING ANOTHER TYPE OF FILE (SERVER SIDE) - arasaurolopus_baby.pdf
+
+[vishalsingh@loki lab6]$ ./server
+Server program STARTED
+Communication FIFOs created
+Waiting for client...
+FIFOs opened successfully
+Received filename from client: /home/COIS/3380/lab3/arasaurolopus_baby.pdf
+File opened successfully for writing
+Received 1024 bytes from client and written to file
+Received 1024 bytes from client and written to file
+Received 1024 bytes from client and written to file
+Received 1024 bytes from client and written to file
+Received 1024 bytes from client and written to file
+Received 1024 bytes from client and written to file
+Received 1024 bytes from client and written to file
+Received 1024 bytes from client and written to file
+Received 1024 bytes from client and written to file
+Received 1024 bytes from client and written to file
+Received 1024 bytes from client and written to file
+Received 1024 bytes from client and written to file
+Received 1024 bytes from client and written to file
+Received 1024 bytes from client and written to file
+Received 1024 bytes from client and written to file
+Received 1024 bytes from client and written to file
+Received 1024 bytes from client and written to file
+Received 1024 bytes from client and written to file
+Received 1024 bytes from client and written to file
+Received 1024 bytes from client and written to file
+Received 195 bytes from client and written to file
+Acknowledgment sent to client
+Server program finished
+
+# TASK 3.2 SENDING ANOTHER TYPE OF FILE (CLIENT SIDE) - arasaurolopus_baby.pdf
+
+[vishalsingh@loki lab6]$ ./client /home/COIS/3380/lab3/arasaurolopus_baby.pdf
+Client program started
+Communication FIFOs found
+FIFOs opened successfully
+Filename sent to the server: /home/COIS/3380/lab3/arasaurolopus_baby.pdf
+File opened successfully
+Sent 1024 bytes to server
+Sent 1024 bytes to server
+Sent 1024 bytes to server
+Sent 1024 bytes to server
+Sent 1024 bytes to server
+Sent 1024 bytes to server
+Sent 1024 bytes to server
+Sent 1024 bytes to server
+Sent 1024 bytes to server
+Sent 1024 bytes to server
+Sent 1024 bytes to server
+Sent 1024 bytes to server
+Sent 1024 bytes to server
+Sent 1024 bytes to server
+Sent 1024 bytes to server
+Sent 1024 bytes to server
+Sent 1024 bytes to server
+Sent 1024 bytes to server
+Sent 1024 bytes to server
+Sent 1024 bytes to server
+Sent 195 bytes to server
+End of file sent
+Server response: All DONE
+Client program finished
+
+# TASK 3.3 DOING MD5SUM AGAIN
+
+[vishalsingh@loki lab6]$ md5sum lab6_sourcefile_local_clone
+8145704e80855b3f7d570361053784f9  lab6_sourcefile_local_clone
+
+[vishalsingh@loki lab6]$ md5sum /home/COIS/3380/lab3/arasaurolopus_baby.pdf
+8145704e80855b3f7d570361053784f9  /home/COIS/3380/lab3/arasaurolopus_baby.pdf
+
+# TASK 4 ( SERVER SIDE) ANOTHER TYPE OF FILE (noc_regions.csv)
+
+
+[vishalsingh@loki lab6]$ ./server
+Server program STARTED
+Communication FIFOs created
+Waiting for client...
+FIFOs opened successfully
+Received filename from client: /home/COIS/3380/play_data/Olympic_results/noc_regions.csv
+File opened successfully for writing
+Received 1024 bytes from client and written to file
+Received 1024 bytes from client and written to file
+Received 1024 bytes from client and written to file
+Received 523 bytes from client and written to file
+Acknowledgment sent to client
+Server program finished
+
+# TASK 4.2 ( CLIENT SIDE) ANOTHER TYPE OF FILE (noc_regions.csv)
+
+vishalsingh@loki lab6]$ ./client /home/COIS/3380/play_data/Olympic_results/noc_regions.csv
+Client program started
+Communication FIFOs found
+FIFOs opened successfully
+Filename sent to the server: /home/COIS/3380/play_data/Olympic_results/noc_regions.csv
+File opened successfully
+Sent 1024 bytes to server
+Sent 1024 bytes to server
+Sent 1024 bytes to server
+Sent 523 bytes to server
+End of file sent
+Server response: All DONE
+Client program finished
+
+# TASK 4.3 (DOING MD5 SUM Again)
+
+[vishalsingh@loki lab6]$ md5sum lab6_sourcefile_local_clone
+a8709c5678b98a3240f16ef8840305c7  lab6_sourcefile_local_clone
+
+[vishalsingh@loki lab6]$ md5sum /home/COIS/3380/play_data/Olympic_results/noc_regions.csv
+a8709c5678b98a3240f16ef8840305c7  /home/COIS/3380/play_data/Olympic_results/noc_regions.csv
+
+
+ # TASK 5 (SERVER SIDE) ANOTHER  TYPE OF FILE I GUESS:) (lab2_textfile.txt)
+
+
+[vishalsingh@loki lab6]$ ./server
+Server program STARTED
+Communication FIFOs created
+Waiting for client...
+FIFOs opened successfully
+Received filename from client: /home/COIS/3380/lab3/lab2_textfile.txt
+File opened successfully for writing
+Received 616 bytes from client and written to file
+Acknowledgment sent to client
+Server program finished
+
+ # TASK 5.2 (CLIENT SIDE) ANOTHER  TYPE OF FILE 
+
+[vishalsingh@loki lab6]$ ./client /home/COIS/3380/lab3/lab2_textfile.txt
+Client program started
+Communication FIFOs found
+FIFOs opened successfully
+Filename sent to the server: /home/COIS/3380/lab3/lab2_textfile.txt
+File opened successfully
+Sent 616 bytes to server
+End of file sent
+Server response: All DONE
+Client program finished
+
+# TASK 5.3 Md5SUM FOR BOTH AGAIN
+
+[vishalsingh@loki lab6]$ md5sum lab6_sourcefile_local_clone
+414c7f0d9ee9513bbcda93a3097a2031  lab6_sourcefile_local_clone
+
+[vishalsingh@loki lab6]$ md5sum /home/COIS/3380/lab3/lab2_textfile.txt
+414c7f0d9ee9513bbcda93a3097a2031  /home/COIS/3380/lab3/lab2_textfile.txt
+
+
+# TASK 6 ANOTHER FILE (SERVER SIDE) - jewel.jpg
+
+[vishalsingh@loki lab6]$ ./server
+Server program STARTED
+Communication FIFOs created
+Waiting for client...
+FIFOs opened successfully
+Received filename from client: /home/COIS/3380/lab3/jewel.jpg
+File opened successfully for writing
+Received 1024 bytes from client and written to file
+Received 1024 bytes from client and written to file
+Received 1024 bytes from client and written to file
+Received 1024 bytes from client and written to file
+Received 1024 bytes from client and written to file
+Received 1024 bytes from client and written to file
+Received 1024 bytes from client and written to file
+Received 1024 bytes from client and written to file
+Received 1024 bytes from client and written to file
+Received 1024 bytes from client and written to file
+Received 1024 bytes from client and written to file
+Received 1024 bytes from client and written to file
+Received 1024 bytes from client and written to file
+Received 1024 bytes from client and written to file
+Received 1024 bytes from client and written to file
+Received 1024 bytes from client and written to file
+Received 1024 bytes from client and written to file
+Received 1024 bytes from client and written to file
+Received 1024 bytes from client and written to file
+Received 1024 bytes from client and written to file
+Received 1024 bytes from client and written to file
+Received 1024 bytes from client and written to file
+Received 1024 bytes from client and written to file
+Received 1024 bytes from client and written to file
+Received 1024 bytes from client and written to file
+Received 1024 bytes from client and written to file
+Received 1024 bytes from client and written to file
+Received 1024 bytes from client and written to file
+Received 1024 bytes from client and written to file
+Received 1024 bytes from client and written to file
+Received 1024 bytes from client and written to file
+Received 1024 bytes from client and written to file
+Received 1024 bytes from client and written to file
+Received 1024 bytes from client and written to file
+Received 1024 bytes from client and written to file
+Received 1024 bytes from client and written to file
+Received 1024 bytes from client and written to file
+Received 1024 bytes from client and written to file
+Received 1024 bytes from client and written to file
+Received 1024 bytes from client and written to file
+Received 1024 bytes from client and written to file
+Received 1024 bytes from client and written to file
+Received 1024 bytes from client and written to file
+Received 1024 bytes from client and written to file
+Received 1024 bytes from client and written to file
+Received 823 bytes from client and written to file
+Acknowledgment sent to client
+Server program finished
+
+# TASK 6.2 ANOTHER FILE (CLIENT SIDE)
+[vishalsingh@loki lab6]$ ./client /home/COIS/3380/lab3/jewel.jpg
+Client program started
+Communication FIFOs found
+FIFOs opened successfully
+Filename sent to the server: /home/COIS/3380/lab3/jewel.jpg
+File opened successfully
+Sent 1024 bytes to server
+Sent 1024 bytes to server
+Sent 1024 bytes to server
+Sent 1024 bytes to server
+Sent 1024 bytes to server
+Sent 1024 bytes to server
+Sent 1024 bytes to server
+Sent 1024 bytes to server
+Sent 1024 bytes to server
+Sent 1024 bytes to server
+Sent 1024 bytes to server
+Sent 1024 bytes to server
+Sent 1024 bytes to server
+Sent 1024 bytes to server
+Sent 1024 bytes to server
+Sent 1024 bytes to server
+Sent 1024 bytes to server
+Sent 1024 bytes to server
+Sent 1024 bytes to server
+Sent 1024 bytes to server
+Sent 1024 bytes to server
+Sent 1024 bytes to server
+Sent 1024 bytes to server
+Sent 1024 bytes to server
+Sent 1024 bytes to server
+Sent 1024 bytes to server
+Sent 1024 bytes to server
+Sent 1024 bytes to server
+Sent 1024 bytes to server
+Sent 1024 bytes to server
+Sent 1024 bytes to server
+Sent 1024 bytes to server
+Sent 1024 bytes to server
+Sent 1024 bytes to server
+Sent 1024 bytes to server
+Sent 1024 bytes to server
+Sent 1024 bytes to server
+Sent 1024 bytes to server
+Sent 1024 bytes to server
+Sent 1024 bytes to server
+Sent 1024 bytes to server
+Sent 1024 bytes to server
+Sent 1024 bytes to server
+Sent 1024 bytes to server
+Sent 1024 bytes to server
+Sent 823 bytes to server
+End of file sent
+Server response: All DONE
+Client program finished
+[vishalsingh@loki lab6]$
+
+
+
+#TASK 6.3 (MD5SUM FOR BOTH )
+[vishalsingh@loki lab6]$ md5sum lab6_sourcefile_local_clone
+8f87ca8a026c94d8d457794f3e07da3a  lab6_sourcefile_local_clone
+
+[vishalsingh@loki lab6]$ md5sum /home/COIS/3380/lab3/jewel.jpg
+8f87ca8a026c94d8d457794f3e07da3a  /home/COIS/3380/lab3/jewel.jpg
+[vishalsingh@loki lab6]$
+
+
+
+
+
+
+
+
+
+

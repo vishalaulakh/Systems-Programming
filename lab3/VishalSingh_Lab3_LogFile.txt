@@ -1,0 +1,437 @@
+Script started on Thu 29 Feb 2024 09:01:02 PM EST
+
+# DISPLAYING MY LAB3.C FILE
+[vishalsingh@loki lab3]$ cat lab3.c
+#define _GNU_SOURCE
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <dirent.h>
+#include <sys/stat.h>
+#include <sys/types.h>
+#include <unistd.h>
+#include <string.h>
+#include <time.h>
+#include <limits.h> 
+#include <pwd.h>
+#include <grp.h>
+ 
+#ifndef PATH_MAX
+#define PATH_MAX 4096 
+#endif
+
+//Function that prints the permissions in a rwxrwxrwx format
+void print_permissions(mode_t mode) {
+    printf((mode & S_IRUSR) ? "r" : "-");
+    printf((mode & S_IWUSR) ? "w" : "-");
+    printf((mode & S_IXUSR) ? "x" : "-");
+    printf((mode & S_IRGRP) ? "r" : "-");
+    printf((mode & S_IWGRP) ? "w" : "-");
+    printf((mode & S_IXGRP) ? "x" : "-");
+    printf((mode & S_IROTH) ? "r" : "-");
+    printf((mode & S_IWOTH) ? "w" : "-");
+    printf((mode & S_IXOTH) ? "x" : "-");
+}
+// Function to print the Details of a file (inode, type, permissions, UID, GID, modification date, size, filename)
+void printFileDetails(const char *filename, const struct stat *fileStat) {
+    struct passwd *pwd = getpwuid(fileStat->st_uid); //get the user info based on UID
+    struct group *grp = getgrgid(fileStat->st_gid); // get the group information based on GID
+
+   // Formating the modification time as a string
+    char timeString[80];
+    strftime(timeString, sizeof(timeString), "%Y-%m-%d %H:%M:%S", localtime(&fileStat->st_mtime));
+   // Printing the Inode number
+    printf("%lu ", (unsigned long)fileStat->st_ino);
+  
+    // Printing "DIR" if it is a directory, otherwise "REG" for a regular file
+    printf(S_ISDIR(fileStat->st_mode) ? "DIR  " : "REG  ");
+
+    // Printing the file permissions
+    print_permissions(fileStat->st_mode);
+
+   // Printing UID, GID, UserName, GroupName, modification time, file Size and File Name.
+    printf(" %-4d %-4d  %-10s  %-10s %-19s %-8lld %s\n",
+           fileStat->st_uid, fileStat->st_gid,
+           pwd ? pwd->pw_name : "", // if pwd is not NULL, use the user name; otherwise use an empty string
+           grp ? grp->gr_name : "", // if grp is not NULL, using the group name; otherwise an empty string
+           timeString,
+           (long long)fileStat->st_size, filename);
+}
+// Function to list the files in a directory based on the specified criteria
+void listFiles(const char *path, int minDaysOld, int maxDaysOld, long long minSize, long long maxSize) {
+    DIR *dir;
+    struct dirent *entry;
+    struct stat fileStat;
+
+    dir = opendir(path);
+    if (dir == NULL) {
+        perror("Error opening directory");
+        exit(EXIT_FAILURE);
+    }
+
+    printf("Inode   Type Permission%-4s %-4s  %-10s  %-10s %-19s %-8s %s\n", " UID", " GID", " UName","GName","Modification date","Size","Filename");
+
+    while ((entry = readdir(dir)) != NULL) {
+
+	// Skip entries with names "." and ".."
+        if (strcmp(entry->d_name, ".") == 0 || strcmp(entry->d_name, "..") == 0) {
+            continue;
+        }
+        char filePath[PATH_MAX];
+        snprintf(filePath, sizeof(filePath), "%s/%s", path, entry->d_name);
+
+        if (stat(filePath, &fileStat) == -1) {
+            perror("Error getting file status");
+            exit(EXIT_FAILURE);
+        }
+
+        // Filter on the  modification time and size of files
+        time_t currentTime = time(NULL);
+        time_t modifiedTime = fileStat.st_mtime;
+        int daysOld = (int)((currentTime - modifiedTime) / (24 * 3600));
+
+        if ((minDaysOld == -1 || daysOld >= minDaysOld) &&
+            (maxDaysOld == -1 || daysOld <= maxDaysOld) &&
+            (minSize == -1 || fileStat.st_size >= minSize) &&
+            (maxSize == -1 || fileStat.st_size <= maxSize)) {
+            printFileDetails(entry->d_name, &fileStat);
+        }
+    }
+
+    closedir(dir);
+}
+
+// Main function to parse the command line arguments and call the listFiles function
+int main(int argc, char *argv[]) {
+    const char *path = "."; // Default to the current directory if no directory is specified
+    int minDaysOld = -1, maxDaysOld = -1;
+    long long minSize = -1, maxSize = -1;
+
+    int opt;
+    while ((opt = getopt(argc, argv, "o:y:l:s:")) != -1) {
+        switch (opt) {
+            case 'o':
+                minDaysOld = atoi(optarg);
+                break;
+            case 'y':
+                maxDaysOld = atoi(optarg);
+                break;
+            case 'l':
+                minSize = atoll(optarg);
+                break;
+            case 's':
+                maxSize = atoll(optarg);
+                break;
+            default:
+                fprintf(stderr, "Usage: %s [-o minDaysOld] [-y maxDaysOld] [-l minSize] [-s maxSize] [directory]\n", argv[0]);
+                exit(EXIT_FAILURE);
+        }
+    }
+
+    // Determine if a directory is provided
+    if (optind < argc) {
+        path = argv[optind];
+    }
+
+    // Checking if the directory exists
+    if (opendir(path) == NULL) {
+        perror("Error opening directory");
+        exit(EXIT_FAILURE);
+    }
+
+    // Caling the function to list files based on specified criteria
+    listFiles(path, minDaysOld, maxDaysOld, minSize, maxSize);
+
+    return 0;
+}
+_________________________________________________________________________________________________________________________________
+# COMPILING THE FILE USING GCC
+[vishalsingh@loki lab3]$ gcc -std=c99 -o lab3 lab3.c
+
+# LOOKING INTO WHAT'S IN THE DIRECTORIES I AM USING FOR THIS LAB
+
+[vishalsingh@loki lab3]$ ls -lt /home/COIS/3380/lab3
+total 33368
+-rw-r--r--. 1 jacques cois3380     1921 Sep 26  2022 small_world.txt
+-rw-r--r--. 1 jacques cois3380  1273576 Apr 17  2022 putty.exe
+-rw-r--r--. 1 jacques cois3380    20675 Apr 17  2022 arasaurolopus_baby.pdf
+-rw-r--r--. 1 jacques cois3380   408606 Apr 17  2022 poke1.jpg
+-rw-r--r--. 1 jacques cois3380    46903 Apr 17  2022 jewel.jpg
+drw-r--r--. 2 jacques cois3380     4096 Apr  7  2022 gnuplot
+-rw-r--r--. 1 jacques cois3380 16436089 Jul 30  2017 lab3_dir.tar.gz
+-rw-r--r--. 1 jacques cois3380      616 Jul 25  2017 lab2_textfile.txt
+-rw-r--r--. 1 jacques cois3380  9043232 Feb  4  2017 WinSCP-5.9.3-Setup.exe
+-rw-r--r--. 1 jacques cois3380     3093 Feb  1  2017 string_testing.c
+-rw-r--r--. 1 jacques cois3380  6477803 Jan 20  2017 cities_all.csv
+-rw-r--r--. 1 jacques cois3380      559 Jan 20  2017 cities_short.csv
+-rw-r--r--. 1 jacques cois3380   213904 Dec  9  2016 visual_Studio_Community.exe
+-rw-r--r--. 1 jacques cois3380     6915 Jan 26  2016 3_range_random.c
+-rw-r--r--. 1 jacques cois3380     1832 Jan 26  2016 1_test_random.c
+-rw-r--r--. 1 jacques cois3380     2879 Jan 26  2016 2_seed_random.c
+-rw-r--r--. 1 jacques cois3380    22434 Jan 21  2016 Shell_file_processing.pdf
+-rw-r--r--. 1 jacques cois3380    87489 Feb 21  2000 diplodocus.pdf
+-rw-r--r--. 1 jacques cois3380    36019 Feb 21  2000 stegosau.pdf
+-rw-r--r--. 1 jacques cois3380    40102 Dec  6  1987 CALCOMP.ARC
+-rw-r--r--. 1 jacques cois3380     1179 Jan  1  1980 C128.XTK
+[vishalsingh@loki lab3]$ ls -lt /home/COIS/3320
+total 120
+drwxr-xr-x. 3 root jacques 4096 Mar 16  2023 lab3
+-rw-rw-r--. 1 root jacques 3744 Jan 30  2023 8_gaussian_example.c
+-rwxrwxr-x. 1 root jacques 8704 Jan 19  2023 dice
+-rwxrwxr-x. 1 root jacques 8712 Jan 19  2023 seed
+-rw-rw-r--. 1 root jacques 2151 Jan 19  2023 7_roll_two_dice.c
+-rw-rw-r--. 1 root jacques 1782 Jan 19  2023 6_seeded_rand_0_to_1.c
+-rwxrwxr-x. 1 root jacques 8624 Jan 14  2023 scaled
+-rw-rw-r--. 1 root jacques 1500 Jan 14  2023 5_rand_0_to_1.c
+-rw-rw-r--. 1 root jacques 1200 Jan 14  2023 4_random_values.c
+-rwxrwxr-x. 1 root jacques 8624 Jan 14  2023 random
+-rwxrwxr-x. 1 root jacques 8576 Jan 14  2023 values
+-rw-rw-r--. 1 root jacques 2006 Jan 14  2023 3_command_line_values.c
+-rwxrwxr-x. 1 root jacques 8480 Jan 14  2023 param
+-rw-rw-r--. 1 root jacques 1580 Jan 14  2023 2_command_line_parameters.c
+-rwxrwxr-x. 1 root jacques 8368 Jan 14  2023 hello
+-rw-rw-r--. 1 root jacques  382 Jan 14  2023 1_hello_world.c
+
+[vishalsingh@loki lab3]$ ls -l /home/COIS/3380/play_data
+total 1012
+-rwxr-xr-x. 1 jacques cois3380    111 Aug  9  2022 match_movies.sh
+-rwxr-xr-x. 1 jacques cois3380 494431 Aug  2  2022 movies.csv
+-rwxr-xr-x. 1 jacques cois3380    299 Aug  6  2022 movies_random_order.caret
+-rwxr-xr-x. 1 jacques cois3380 494431 Aug  4  2022 movies_random_order.csv
+-rwxr-xr-x. 1 jacques cois3380    114 Aug  2  2022 movies.txt
+drwxr-xr-x. 2 root    root       4096 Mar 29  2023 Olympic_results
+-rwxr-xr-x. 1 jacques cois3380  15312 Jul 31  2022 oscars.csv
+-rwxr-xr-x. 1 jacques cois3380     80 Jul 31  2022 oscars.txt
+-rwxr-xr-x. 1 jacques cois3380    324 Aug 13  2022 parameters.sh
+-rwxr-xr-x. 1 jacques cois3380     21 Aug  6  2022 sequence.txt
+
+__________________________________________________________________________________________________________________________________
+LISTING ALL OF THE FILES IN /HOME/COIS/3380/LAB3
+
+[vishalsingh@loki lab3]$ ./lab3 /home/COIS/3380/lab3
+Inode   Type Permission UID  GID   UName      GName      Modification date   Size     Filename
+1838607 REG  rw-r--r-- 1002 1737  jacques     cois3380   2022-04-17 17:09:30 20675    arasaurolopus_baby.pdf
+1838625 REG  rw-r--r-- 1002 1737  jacques     cois3380   2017-02-01 07:07:25 3093     string_testing.c
+1838619 REG  rw-r--r-- 1002 1737  jacques     cois3380   2017-07-30 11:44:47 16436089 lab3_dir.tar.gz
+1838315 REG  rw-r--r-- 1002 1737  jacques     cois3380   2016-01-26 10:53:18 6915     3_range_random.c
+1838313 REG  rw-r--r-- 1002 1737  jacques     cois3380   2016-01-26 09:58:24 1832     1_test_random.c
+1838616 DIR  rw-r--r-- 1002 1737  jacques     cois3380   2022-04-07 08:46:13 4096     gnuplot
+1838314 REG  rw-r--r-- 1002 1737  jacques     cois3380   2016-01-26 09:58:24 2879     2_seed_random.c
+1838620 REG  rw-r--r-- 1002 1737  jacques     cois3380   2022-04-17 17:09:20 408606   poke1.jpg
+1838622 REG  rw-r--r-- 1002 1737  jacques     cois3380   2016-01-21 10:43:52 22434    Shell_file_processing.pdf
+1838618 REG  rw-r--r-- 1002 1737  jacques     cois3380   2017-07-25 11:23:57 616      lab2_textfile.txt
+1838626 REG  rw-r--r-- 1002 1737  jacques     cois3380   2016-12-09 10:17:00 213904   visual_Studio_Community.exe
+1838614 REG  rw-r--r-- 1002 1737  jacques     cois3380   2017-01-20 12:38:49 559      cities_short.csv
+1838613 REG  rw-r--r-- 1002 1737  jacques     cois3380   2017-01-20 12:38:49 6477803  cities_all.csv
+1838624 REG  rw-r--r-- 1002 1737  jacques     cois3380   2000-02-21 18:21:40 36019    stegosau.pdf
+1838612 REG  rw-r--r-- 1002 1737  jacques     cois3380   1987-12-06 16:21:52 40102    CALCOMP.ARC
+1838621 REG  rw-r--r-- 1002 1737  jacques     cois3380   2022-04-17 17:10:59 1273576  putty.exe
+1838627 REG  rw-r--r-- 1002 1737  jacques     cois3380   2017-02-04 15:12:29 9043232  WinSCP-5.9.3-Setup.exe
+1838615 REG  rw-r--r-- 1002 1737  jacques     cois3380   2000-02-21 18:24:00 87489    diplodocus.pdf
+1838623 REG  rw-r--r-- 1002 1737  jacques     cois3380   2022-09-26 11:47:21 1921     small_world.txt
+1838617 REG  rw-r--r-- 1002 1737  jacques     cois3380   2022-04-17 17:09:10 46903    jewel.jpg
+1838611 REG  rw-r--r-- 1002 1737  jacques     cois3380   1980-01-01 00:01:28 1179     C128.XTK
+___________________________________________________________________________________________________________________________________
+ # LISTING ALL OF THE FILES SMALLER THAN 5000 BYTES[vishalsingh@loki lab3]$ ./lab3 -s 5000 /home/COIS/3380/lab3
+Inode   Type Permission UID  GID   UName      GName      Modification date   Size     Filename
+1838625 REG  rw-r--r-- 1002 1737  jacques     cois3380   2017-02-01 07:07:25 3093     string_testing.c
+1838313 REG  rw-r--r-- 1002 1737  jacques     cois3380   2016-01-26 09:58:24 1832     1_test_random.c
+1838616 DIR  rw-r--r-- 1002 1737  jacques     cois3380   2022-04-07 08:46:13 4096     gnuplot
+1838314 REG  rw-r--r-- 1002 1737  jacques     cois3380   2016-01-26 09:58:24 2879     2_seed_random.c
+1838618 REG  rw-r--r-- 1002 1737  jacques     cois3380   2017-07-25 11:23:57 616      lab2_textfile.txt
+1838614 REG  rw-r--r-- 1002 1737  jacques     cois3380   2017-01-20 12:38:49 559      cities_short.csv
+1838623 REG  rw-r--r-- 1002 1737  jacques     cois3380   2022-09-26 11:47:21 1921     small_world.txt
+1838611 REG  rw-r--r-- 1002 1737  jacques     cois3380   1980-01-01 00:01:28 1179     C128.XTK
+
+# LISTING ALL OF THE FILES SMALLER THAN 500 BYTES - NO SUCH FILES 
+[vishalsingh@loki lab3]$ ./lab3 -s 500 /home/COIS/3380/lab3
+Inode   Type Permission UID  GID   UName      GName      Modification date   Size     Filename
+___________________________________________________________________________________________________________________________________
+# LISTING ALL THE FILES LARGER THAN 50,000 BYTES
+[vishalsingh@loki lab3]$ ./lab3 -l 50000 /home/COIS/3380/lab3
+Inode   Type Permission UID  GID   UName      GName      Modification date   Size     Filename
+1838619 REG  rw-r--r-- 1002 1737  jacques     cois3380   2017-07-30 11:44:47 16436089 lab3_dir.tar.gz
+1838620 REG  rw-r--r-- 1002 1737  jacques     cois3380   2022-04-17 17:09:20 408606   poke1.jpg
+1838626 REG  rw-r--r-- 1002 1737  jacques     cois3380   2016-12-09 10:17:00 213904   visual_Studio_Community.exe
+1838613 REG  rw-r--r-- 1002 1737  jacques     cois3380   2017-01-20 12:38:49 6477803  cities_all.csv
+1838621 REG  rw-r--r-- 1002 1737  jacques     cois3380   2022-04-17 17:10:59 1273576  putty.exe
+1838627 REG  rw-r--r-- 1002 1737  jacques     cois3380   2017-02-04 15:12:29 9043232  WinSCP-5.9.3-Setup.exe
+1838615 REG  rw-r--r-- 1002 1737  jacques     cois3380   2000-02-21 18:24:00 87489    diplodocus.pdf
+
+LISTING ALL THE FILES LARGER THAN 0 BYTES (Should be all the files)
+[vishalsingh@loki lab3]$ ./lab3 -l 0 /home/COIS/3380/lab3
+Inode   Type Permission UID  GID   UName      GName      Modification date   Size     Filename
+1838607 REG  rw-r--r-- 1002 1737  jacques     cois3380   2022-04-17 17:09:30 20675    arasaurolopus_baby.pdf
+1838625 REG  rw-r--r-- 1002 1737  jacques     cois3380   2017-02-01 07:07:25 3093     string_testing.c
+1838619 REG  rw-r--r-- 1002 1737  jacques     cois3380   2017-07-30 11:44:47 16436089 lab3_dir.tar.gz
+1838315 REG  rw-r--r-- 1002 1737  jacques     cois3380   2016-01-26 10:53:18 6915     3_range_random.c
+1838313 REG  rw-r--r-- 1002 1737  jacques     cois3380   2016-01-26 09:58:24 1832     1_test_random.c
+1838616 DIR  rw-r--r-- 1002 1737  jacques     cois3380   2022-04-07 08:46:13 4096     gnuplot
+1838314 REG  rw-r--r-- 1002 1737  jacques     cois3380   2016-01-26 09:58:24 2879     2_seed_random.c
+1838620 REG  rw-r--r-- 1002 1737  jacques     cois3380   2022-04-17 17:09:20 408606   poke1.jpg
+1838622 REG  rw-r--r-- 1002 1737  jacques     cois3380   2016-01-21 10:43:52 22434    Shell_file_processing.pdf
+1838618 REG  rw-r--r-- 1002 1737  jacques     cois3380   2017-07-25 11:23:57 616      lab2_textfile.txt
+1838626 REG  rw-r--r-- 1002 1737  jacques     cois3380   2016-12-09 10:17:00 213904   visual_Studio_Community.exe
+1838614 REG  rw-r--r-- 1002 1737  jacques     cois3380   2017-01-20 12:38:49 559      cities_short.csv
+1838613 REG  rw-r--r-- 1002 1737  jacques     cois3380   2017-01-20 12:38:49 6477803  cities_all.csv
+1838624 REG  rw-r--r-- 1002 1737  jacques     cois3380   2000-02-21 18:21:40 36019    stegosau.pdf
+1838612 REG  rw-r--r-- 1002 1737  jacques     cois3380   1987-12-06 16:21:52 40102    CALCOMP.ARC
+1838621 REG  rw-r--r-- 1002 1737  jacques     cois3380   2022-04-17 17:10:59 1273576  putty.exe
+1838627 REG  rw-r--r-- 1002 1737  jacques     cois3380   2017-02-04 15:12:29 9043232  WinSCP-5.9.3-Setup.exe
+1838615 REG  rw-r--r-- 1002 1737  jacques     cois3380   2000-02-21 18:24:00 87489    diplodocus.pdf
+1838623 REG  rw-r--r-- 1002 1737  jacques     cois3380   2022-09-26 11:47:21 1921     small_world.txt
+1838617 REG  rw-r--r-- 1002 1737  jacques     cois3380   2022-04-17 17:09:10 46903    jewel.jpg
+1838611 REG  rw-r--r-- 1002 1737  jacques     cois3380   1980-01-01 00:01:28 1179     C128.XTK
+
+___________________________________________________________________________________________________________________________________
+# LISTING ALL OF THE FILES IN /HOME/COIS/3380/LAB3 CREATED SINCE 190 DAYS AGO (NO SUCH FILES EXIST:)
+[vishalsingh@loki lab3]$ ./lab3 -y 190 /home/COIS/3380/lab3
+Inode   Type Permission UID  GID   UName      GName      Modification date   Size     Filename
+
+# TRYING 600 DAYS NOW 
+[vishalsingh@loki lab3]$ ./lab3 -y 600 /home/COIS/3380/lab3
+Inode   Type Permission UID  GID   UName      GName      Modification date   Size     Filename
+1838623 REG  rw-r--r-- 1002 1737  jacques     cois3380   2022-09-26 11:47:21 1921     small_world.txt
+___________________________________________________________________________________________________________________________________
+# LISTING ALL OF THE FILES IN /HOME/COIS/3380/LAB3 CREATED BEFORE 10 YEARS AGO 
+[vishalsingh@loki lab3]$ ./lab3 -o 3650 /home/COIS/3380/lab3
+Inode   Type Permission UID  GID   UName      GName      Modification date   Size     Filename
+1838624 REG  rw-r--r-- 1002 1737  jacques     cois3380   2000-02-21 18:21:40 36019    stegosau.pdf
+1838612 REG  rw-r--r-- 1002 1737  jacques     cois3380   1987-12-06 16:21:52 40102    CALCOMP.ARC
+1838615 REG  rw-r--r-- 1002 1737  jacques     cois3380   2000-02-21 18:24:00 87489    diplodocus.pdf
+1838611 REG  rw-r--r-- 1002 1737  jacques     cois3380   1980-01-01 00:01:28 1179     C128.XTK
+___________________________________________________________________________________________________________________________________
+# LISTING ALL OF THE FILES IN /HOME/COIS/3380/LAB3 CREATED MORE THAN 2500 DAYS AGO BUT SINCE JANUARY OF 1994
+[vishalsingh@loki lab3]$ ./lab3 -o 2500 -y 9862 /home/COIS/3380/lab3
+Inode   Type Permission UID  GID   UName      GName      Modification date   Size     Filename
+1838625 REG  rw-r--r-- 1002 1737  jacques     cois3380   2017-02-01 07:07:25 3093     string_testing.c
+1838315 REG  rw-r--r-- 1002 1737  jacques     cois3380   2016-01-26 10:53:18 6915     3_range_random.c
+1838313 REG  rw-r--r-- 1002 1737  jacques     cois3380   2016-01-26 09:58:24 1832     1_test_random.c
+1838314 REG  rw-r--r-- 1002 1737  jacques     cois3380   2016-01-26 09:58:24 2879     2_seed_random.c
+1838622 REG  rw-r--r-- 1002 1737  jacques     cois3380   2016-01-21 10:43:52 22434    Shell_file_processing.pdf
+1838626 REG  rw-r--r-- 1002 1737  jacques     cois3380   2016-12-09 10:17:00 213904   visual_Studio_Community.exe
+1838614 REG  rw-r--r-- 1002 1737  jacques     cois3380   2017-01-20 12:38:49 559      cities_short.csv
+1838613 REG  rw-r--r-- 1002 1737  jacques     cois3380   2017-01-20 12:38:49 6477803  cities_all.csv
+1838624 REG  rw-r--r-- 1002 1737  jacques     cois3380   2000-02-21 18:21:40 36019    stegosau.pdf
+1838627 REG  rw-r--r-- 1002 1737  jacques     cois3380   2017-02-04 15:12:29 9043232  WinSCP-5.9.3-Setup.exe
+1838615 REG  rw-r--r-- 1002 1737  jacques     cois3380   2000-02-21 18:24:00 87489    diplodocus.pdf
+__________________________________________________________________________________________________________________________________
+# LISTING ALL OF THE FILES IN /HOME/COIS/3380/LAB3 MADE MORE THAN 10 YEARS AGO BUT SINCE JANUARY OF 1994 LARGER THAN 40000 BYTES 
+BUT SMALLER THAN 100,000 BYTES
+
+[vishalsingh@loki lab3]$ ./lab3 -o 3650 -y 9862 -l 40000 -s 100000 /home/COIS/3380/lab3
+Inode   Type Permission UID  GID   UName      GName      Modification date   Size     Filename
+1838615 REG  rw-r--r-- 1002 1737  jacques     cois3380   2000-02-21 18:24:00 87489    diplodocus.pdf
+___________________________________________________________________________________________________________________________________
+# NO DIRECTORY ON COMMAND LINE (DEFAULT TO CURRENT DIRECTORY)
+
+vishalsingh@loki:~/3380/lab3[vishalsingh@loki lab3]$ ./lab3
+Inode   Type Permission UID  GID   UName      GName      Modification date   Size     Filename
+1579447 REG  rwxrwxr-x 1846 1865  vishalsingh  vishalsingh 2024-02-29 21:02:02 13616    lab3
+1582036 REG  rw-rw-r-- 1846 1865  vishalsingh  vishalsingh 2024-02-29 21:07:18 16384    VishalSingh_Lab3_LogFile.txt
+1579445 REG  rw-rw-r-- 1846 1865  vishalsingh  vishalsingh 2024-02-29 20:36:32 4993     lab3.c
+
+vishalsingh@loki:~/3380/lab3[vishalsingh@loki lab3]$ ./lab3 -s 10000
+Inode   Type Permission UID  GID   UName      GName      Modification date   Size     Filename
+1579445 REG  rw-rw-r-- 1846 1865  vishalsingh  vishalsingh 2024-02-29 20:36:32 4993     lab3.c
+
+
+[vishalsingh@loki lab3]$ ./lab3 -l 10000
+Inode   Type Permission UID  GID   UName      GName      Modification date   Size     Filename
+1579447 REG  rwxrwxr-x 1846 1865  vishalsingh  vishalsingh 2024-02-29 21:02:02 13616    lab3
+1582036 REG  rw-rw-r-- 1846 1865  vishalsingh  vishalsingh 2024-02-29 21:10:42 20480    VishalSingh_Lab3_LogFile.txt
+___________________________________________________________________________________________________________________________________
+ 
+# ERROR CHECK: GIVING A WRONG DIRECTORY
+
+[vishalsingh@loki lab3]$ ./lab3 x
+Error opening directory: No such file or directory
+
+[vishalsingh@loki lab3]$ ./lab3 -o 2500 -y 9862 /home/CS/80/lab3
+Error opening directory: No such file or directory
+___________________________________________________________________________________________________________________________________
+
+# ERROR CHECK: GIVING A WRONG OPTION
+[vishalsingh@loki lab3]$ ./lab3 -V 360  /home/COIS/3380/lab3
+./lab3: invalid option -- 'V'
+Usage: ./lab3 [-o minDaysOld] [-y maxDaysOld] [-l minSize] [-s maxSize] [directory]
+
+___________________________________________________________________________________________________________________________________
+# PLAYING AROUND WITH ANOTHER DIRECTORY :
+[vishalsingh@loki lab3]$ ./lab3 -s 20000 /home/COIS/3320
+Inode   Type Permission UID  GID   UName      GName      Modification date   Size     Filename
+1845716 DIR  rwxr-xr-x 0    1003  root        jacques    2023-03-16 12:53:10 4096     lab3
+1844535 REG  rw-rw-r-- 0    1003  root        jacques    2023-01-19 11:41:22 2151     7_roll_two_dice.c
+1845005 REG  rw-rw-r-- 0    1003  root        jacques    2023-01-30 15:24:36 3744     8_gaussian_example.c
+1844533 REG  rw-rw-r-- 0    1003  root        jacques    2023-01-19 11:41:11 1782     6_seeded_rand_0_to_1.c
+1844534 REG  rwxrwxr-x 0    1003  root        jacques    2023-01-19 11:41:39 8712     seed
+1844532 REG  rwxrwxr-x 0    1003  root        jacques    2023-01-14 09:54:33 8624     scaled
+1844536 REG  rwxrwxr-x 0    1003  root        jacques    2023-01-19 11:41:46 8704     dice
+1844524 REG  rw-rw-r-- 0    1003  root        jacques    2023-01-14 09:45:04 1580     2_command_line_parameters.c
+1844530 REG  rwxrwxr-x 0    1003  root        jacques    2023-01-14 09:49:42 8624     random
+1844528 REG  rwxrwxr-x 0    1003  root        jacques    2023-01-14 09:48:10 8576     values
+1844531 REG  rw-rw-r-- 0    1003  root        jacques    2023-01-14 09:51:26 1500     5_rand_0_to_1.c
+1844527 REG  rw-rw-r-- 0    1003  root        jacques    2023-01-14 09:47:55 2006     3_command_line_values.c
+1844525 REG  rwxrwxr-x 0    1003  root        jacques    2023-01-14 09:42:37 8368     hello
+1844526 REG  rwxrwxr-x 0    1003  root        jacques    2023-01-14 09:45:26 8480     param
+1844529 REG  rw-rw-r-- 0    1003  root        jacques    2023-01-14 09:51:09 1200     4_random_values.c
+1844523 REG  rw-rw-r-- 0    1003  root        jacques    2023-01-14 09:42:14 382      1_hello_world.c
+
+# LISTING ALL THE FILES IN /HOME/COIS/3320 SMALLER THAN 2000 BYTES AND MODIFIFED LESS THAN 500 DAYS AGO
+[vishalsingh@loki lab3]$ ./lab3 -s 2000 -y 500 /home/COIS/3320
+Inode   Type Permission UID  GID   UName      GName      Modification date   Size     Filename
+1844533 REG  rw-rw-r-- 0    1003  root        jacques    2023-01-19 11:41:11 1782     6_seeded_rand_0_to_1.c
+1844524 REG  rw-rw-r-- 0    1003  root        jacques    2023-01-14 09:45:04 1580     2_command_line_parameters.c
+1844531 REG  rw-rw-r-- 0    1003  root        jacques    2023-01-14 09:51:26 1500     5_rand_0_to_1.c
+1844529 REG  rw-rw-r-- 0    1003  root        jacques    2023-01-14 09:51:09 1200     4_random_values.c
+1844523 REG  rw-rw-r-- 0    1003  root        jacques    2023-01-14 09:42:14 382      1_hello_world.c
+
+# ERROR CHECK- GIVING A WRONG DIRECTORY
+[vishalsingh@loki lab3]$ ./lab3 -s 2000 -y 500 /home/COIS/3320/abc
+Error opening directory: No such file or directory
+
+
+
+]0;vishalsingh@loki:~/3380/lab3[vishalsingh@loki lab3]$ ./lab3 -l 3000 -s 5000 /home/COIS/3320
+Inode   Type Permission UID  GID   UName      GName      Modification date   Size     Filename
+1845716 DIR  rwxr-xr-x 0    1003  root        jacques    2023-03-16 12:53:10 4096     lab3
+1845005 REG  rw-rw-r-- 0    1003  root        jacques    2023-01-30 15:24:36 3744     8_gaussian_example.c
+
+[vishalsingh@loki lab3]$ ./lab3 -s 5000 -y 700 /home/COIS/3380/lab3
+Inode   Type Permission UID  GID   UName      GName      Modification date   Size     Filename
+1838616 DIR  rw-r--r-- 1002 1737  jacques     cois3380   2022-04-07 08:46:13 4096     gnuplot
+1838623 REG  rw-r--r-- 1002 1737  jacques     cois3380   2022-09-26 11:47:21 1921     small_world.txt
+
+[vishalsingh@loki lab3]$ ./lab3 -x /home/COIS/3320
+./lab3: invalid option -- 'x'
+Usage: ./lab3 [-o minDaysOld] [-y maxDaysOld] [-l minSize] [-s maxSize] [directory]
+_____________________________________________________________________________________________________________________________________
+
+# ANOTHER DIRECTORY 
+[vishalsingh@loki lab3]$ ./lab3 /home/COIS/3380/play_data
+Inode   Type Permission UID  GID   UName      GName      Modification date   Size     Filename
+1838448 REG  rwxr-xr-x 1002 1737  jacques     cois3380   2022-08-06 10:11:02 21       sequence.txt
+1838451 REG  rwxr-xr-x 1002 1737  jacques     cois3380   2022-08-09 16:45:17 111      match_movies.sh
+1838434 REG  rwxr-xr-x 1002 1737  jacques     cois3380   2022-07-31 10:43:06 15312    oscars.csv
+1838446 REG  rwxr-xr-x 1002 1737  jacques     cois3380   2022-08-02 08:08:10 494431   movies.csv
+393810 DIR  rwxr-xr-x 0    0     root        root       2023-03-29 12:21:26 4096     Olympic_results
+1838452 REG  rwxr-xr-x 1002 1737  jacques     cois3380   2022-08-13 09:28:38 324      parameters.sh
+1838435 REG  rwxr-xr-x 1002 1737  jacques     cois3380   2022-07-31 10:44:38 80       oscars.txt
+655403 REG  rwxr-xr-x 1002 1737  jacques     cois3380   2022-08-06 09:38:57 299      movies_random_order.caret
+1838447 REG  rwxr-xr-x 1002 1737  jacques     cois3380   2022-08-02 08:09:55 114      movies.txt
+1838449 REG  rwxr-xr-x 1002 1737  jacques     cois3380   2022-08-04 12:51:32 494431   movies_random_order.csv
+
+# ALL FILES IN /HOME/COIS/3380/PLAY_DATA LARGER THAN 1000 BYTES AND MODIFIED MORE THAN 400 DAYS AGO
+[vishalsingh@loki lab3]$ ./lab3 -l 1000 -o 400  /home/COIS/3380/play_data
+Inode   Type Permission UID  GID   UName      GName      Modification date   Size     Filename
+1838434 REG  rwxr-xr-x 1002 1737  jacques     cois3380   2022-07-31 10:43:06 15312    oscars.csv
+1838446 REG  rwxr-xr-x 1002 1737  jacques     cois3380   2022-08-02 08:08:10 494431   movies.csv
+1838449 REG  rwxr-xr-x 1002 1737  jacques     cois3380   2022-08-04 12:51:32 494431   movies_random_order.csv
+
+# ALL FILES IN /HOME/COIS/3380/PLAY_DATA LARGER THAN 1000 BYTES AND MODIFIED MORE THAN 400 DAYS AGO AND SMALLER THAN 20000 BYTES
+[vishalsingh@loki lab3]$ ./lab3 -l 1000 -o 400 -s 20000  /home/COIS/3380/play_data
+Inode   Type Permission UID  GID   UName      GName      Modification date   Size     Filename
+1838434 REG  rwxr-xr-x 1002 1737  jacques     cois3380   2022-07-31 10:43:06 15312    oscars.csv
+exit
+
+Script done on Thu 29 Feb 2024 09:25:48 PM EST
