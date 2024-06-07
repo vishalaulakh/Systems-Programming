@@ -1,0 +1,10 @@
+6805"GET/robots.txt
+4402"POST/1.php
+4286"POST/qq.php
+3638"POST/test.php
+2809"POST/confg.php
+2352"POST/x.php
+2351"HEAD/robots.txt
+2230"POST/q.php
+1839"POST/xx.php
+1831"POST/api.php
